@@ -1,7 +1,16 @@
+import "dotenv/config";
+import { drizzle } from "drizzle-orm/postgres-js";
 import fastify from "fastify";
+import { itemsTable } from "./db/schema.js";
 
 const server = fastify({
 	logger: true,
+});
+
+server.get("/items", async () => {
+	const db = drizzle(`${process.env.DATABASE_URL}`);
+	const allItems = await db.select().from(itemsTable);
+	return { items: allItems };
 });
 
 server.get("/", async () => {
