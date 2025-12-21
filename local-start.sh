@@ -1,26 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-RESET_MIGRATIONS=false
-
-if [ "${1:-}" = "--reset" ]; then
-    RESET_MIGRATIONS=true
-fi
-
 APP_PID=""
 
 cleanup() {
     kill "${APP_PID:-}" 2>/dev/null || true
+    echo "Purging all running containers..."
     docker compose down -v
 }
 trap cleanup EXIT
 
+echo "Removing old JS build..."
 rm -rf dist
-
-if [ "$RESET_MIGRATIONS" = true ]; then
-    echo "Resetting migrations..."
-    rm -rf migrations/*
-fi
 
 echo "Drizzle dev cli generating raw sql files..."
 npx drizzle-kit generate
@@ -67,4 +58,5 @@ fi
 
 npm run build && npm run start &
 APP_PID=$!
+echo "JS app is built and is running on http://localhost:3000"
 wait $APP_PID
