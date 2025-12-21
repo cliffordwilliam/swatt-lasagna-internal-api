@@ -17,7 +17,7 @@ echo "Drizzle dev cli generating raw sql files..."
 npx drizzle-kit generate
 
 echo "Running containers with docker compose up..."
-docker compose up -d
+docker compose up -d postgres adminer
 
 echo "Waiting for PostgreSQL to be ready..."
 for i in {1..30}; do
