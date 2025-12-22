@@ -1,0 +1,12 @@
+.git
+.husky
+node_modules
+dist
+.dockerignore
+.env
+.env.example
+.gitignore
+compose.yaml
+Dockerfile
+LICENSE
+README.md

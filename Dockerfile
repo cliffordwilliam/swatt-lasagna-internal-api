@@ -6,16 +6,14 @@ COPY . .
 RUN npx drizzle-kit generate
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:20-alpine AS production
 WORKDIR /app
-RUN apk add --no-cache postgresql-client
 COPY package*.json ./
 RUN npm ci --only=production --ignore-scripts
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/migrations ./migrations
-COPY seed.sql ./seed.sql
-COPY docker-entrypoint.sh .
-RUN chmod +x docker-entrypoint.sh
 EXPOSE 3000
-ENTRYPOINT ["./docker-entrypoint.sh"]
-CMD ["npm", "run", "start"]
+CMD ["node", "dist/index.js"]
+
+FROM production AS dev-tools
+COPY migrate.js seed.js ./
+COPY --from=builder /app/migrations ./migrations

@@ -16,11 +16,33 @@ services:
     ports:
       - 8080:8080
   app:
-    build: .
+    build:
+      context: .
+      target: production
     ports:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
     depends_on:
+      db-seed:
+        condition: service_completed_successfully
+  db-migrate:
+    build:
+      context: .
+      target: dev-tools
+    command: ["node", "migrate.js"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+    depends_on:
       postgres:
         condition: service_healthy
+  db-seed:
+    build:
+      context: .
+      target: dev-tools
+    command: ["node", "seed.js"]
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+    depends_on:
+      db-migrate:
+        condition: service_completed_successfully
