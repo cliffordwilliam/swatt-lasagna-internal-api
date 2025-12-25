@@ -5,7 +5,7 @@ import { envSchema, type envType } from "./env-schema.js";
 
 declare module "fastify" {
 	interface FastifyInstance {
-		env: envType;
+		config: envType;
 	}
 }
 
