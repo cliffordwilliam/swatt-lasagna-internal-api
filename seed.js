@@ -73,8 +73,7 @@ async function seed() {
       { item_name: 'Tas Kain B3', price: 15000 },
       { item_name: 'Tas Kain B4', price: 15000 },
       { item_name: 'Hampers Marmer Cake', price: 350000 },
-    ])
-    .onConflictDoNothing();
+    ]);
 
   console.log('Seed completed');
 }
