@@ -1,29 +1,37 @@
-import { integer, pgEnum, pgTable, text, varchar } from "drizzle-orm/pg-core";
+import {
+	boolean,
+	date,
+	integer,
+	pgEnum,
+	pgTable,
+	text,
+	varchar,
+} from "drizzle-orm/pg-core";
 
 export const pickupDeliveryEnum = pgEnum("pickup_delivery_enum", [
-	"Pickup",
-	"Delivery",
-	"Gojek",
-	"Citytran",
-	"Paxel",
-	"Daytrans",
-	"Baraya",
-	"Lintas",
-	"Bineka",
-	"Jne",
+	"pickup",
+	"delivery",
+	"gojek",
+	"citytran",
+	"paxel",
+	"daytrans",
+	"baraya",
+	"lintas",
+	"bineka",
+	"jne",
 ]);
 
 export const paymentEnum = pgEnum("payment_enum", [
-	"Tunai",
-	"Kartu Kredit",
-	"Transfer Bank",
-	"QRIS",
+	"tunai",
+	"kartu_kredit",
+	"transfer_bank",
+	"qris",
 ]);
 
 export const orderStatusEnum = pgEnum("order_status_enum", [
-	"Downpayment",
-	"Belum bayar",
-	"Lunas",
+	"downpayment",
+	"belum_bayar",
+	"lunas",
 ]);
 
 export const itemsTable = pgTable("items", {
@@ -32,44 +40,45 @@ export const itemsTable = pgTable("items", {
 	price: integer(),
 });
 
-export const personTable = pgTable("person", {
+export const personsTable = pgTable("persons", {
 	id: integer().primaryKey().generatedAlwaysAsIdentity(),
 	personName: varchar("person_name"),
 });
 
-export const personPhoneTable = pgTable("person_phone", {
+export const personPhonesTable = pgTable("person_phones", {
 	id: integer().primaryKey().generatedAlwaysAsIdentity(),
-	personId: integer("person_id"),
+	personId: integer("person_id").references(() => personsTable.id),
 	phoneNumber: varchar("phone_number"),
-	preferred: integer("preferred"),
+	isPreferred: boolean("is_preferred"),
 });
 
-export const personAddressTable = pgTable("person_address", {
+export const personAddressesTable = pgTable("person_addresses", {
 	id: integer().primaryKey().generatedAlwaysAsIdentity(),
-	personId: integer("person_id"),
+	personId: integer("person_id").references(() => personsTable.id),
 	address: varchar("address"),
-	preferred: integer("preferred"),
+	isPreferred: boolean("is_preferred"),
 });
 
-export const orderTable = pgTable("order", {
+export const ordersTable = pgTable("orders", {
 	id: integer().primaryKey().generatedAlwaysAsIdentity(),
-	po: varchar("po"),
-	buyerId: integer("buyer_id"),
-	recipientId: integer("recipient_id"),
-	orderDate: integer("order_date"),
-	deliveryDate: integer("delivery_date"),
+	poNumber: varchar("po_number"),
+	buyerId: integer("buyer_id").references(() => personsTable.id),
+	recipientId: integer("recipient_id").references(() => personsTable.id),
+	orderDate: date("order_date"),
+	deliveryDate: date("delivery_date"),
 	totalPurchase: integer("total_purchase"),
 	pickupDelivery: pickupDeliveryEnum("pickup_delivery"),
 	shippingCost: integer("shipping_cost"),
 	grandTotal: integer("grand_total"),
-	payment: paymentEnum("payment"),
+	paymentMethod: paymentEnum("payment_method"),
 	orderStatus: orderStatusEnum("order_status"),
 	note: text("note"),
 });
 
-export const orderItemTable = pgTable("order_item", {
-	orderId: integer("order_id"),
-	itemId: integer("item_id"),
+export const orderItemsTable = pgTable("order_items", {
+	id: integer().primaryKey().generatedAlwaysAsIdentity(),
+	orderId: integer("order_id").references(() => ordersTable.id),
+	itemId: integer("item_id").references(() => itemsTable.id),
 	quantity: integer("quantity"),
 	itemName: varchar("item_name"),
 	itemPrice: integer("item_price"),
