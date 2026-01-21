@@ -1,5 +1,6 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import postgres from 'postgres';
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -8,24 +9,34 @@ if (!DATABASE_URL) {
   process.exit(1);
 }
 
-const migrationClient = postgres(DATABASE_URL, { max: 1 });
+const sql = postgres(DATABASE_URL, { max: 1 });
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function run() {
   console.log('Running migrations...');
-  
-  await migrate(drizzle(migrationClient), {
-    migrationsFolder: './migrations',
-  });
+  const migrationDir = path.join(__dirname, 'migrations');
+  if (!fs.existsSync(migrationDir)) {
+    console.error(`Migration directory not found: ${migrationDir}`);
+    process.exit(1);
+  }
+  const files = fs.readdirSync(migrationDir).filter(f => f.endsWith('.sql')).sort();
+  for (const file of files) {
+    console.log(`Applying ${file}`);
+    const migration = fs.readFileSync(path.join(migrationDir, file), 'utf8');
+    await sql.unsafe(migration);
+  }
   
   console.log('Migrations completed successfully');
 }
 
 run()
   .then(async () => {
-    await migrationClient.end();
+    await sql.end();
   })
   .catch(async (err) => {
     console.error('Migration failed:', err);
-    await migrationClient.end();
+    await sql.end();
     process.exit(1);
   });
