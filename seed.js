@@ -6,12 +6,12 @@ if (!DATABASE_URL) {
   process.exit(1);
 }
 
-const client = postgres(DATABASE_URL, { max: 1 });
+const sql = postgres(DATABASE_URL, { max: 1 });
 
 async function seed() {
   console.log('Seeding database...');
 
-  await client`
+  await sql`
     INSERT INTO items (item_name, price) VALUES
       ('Lasagna Mini', 65000),
       ('Lasagna Small', 95000),
@@ -75,12 +75,11 @@ async function seed() {
   console.log('Seed completed');
 }
 
-seed()
-  .then(async () => {
-    await client.end();
-  })
-  .catch(async (err) => {
-    console.error('Seed failed:', err);
-    await client.end();
-    process.exit(1);
-  });
+try {
+  await seed();
+} catch (err) {
+  console.error('Seed failed:', err);
+  process.exit(1);
+} finally {
+  await sql.end();
+}

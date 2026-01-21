@@ -31,12 +31,11 @@ async function run() {
   console.log('Migrations completed successfully');
 }
 
-run()
-  .then(async () => {
-    await sql.end();
-  })
-  .catch(async (err) => {
-    console.error('Migration failed:', err);
-    await sql.end();
-    process.exit(1);
-  });
+try {
+  await run();
+} catch (err) {
+  console.error('Migration failed:', err);
+  process.exit(1);
+} finally {
+  await sql.end();
+}
