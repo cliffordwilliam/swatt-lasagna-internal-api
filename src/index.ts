@@ -1,9 +1,10 @@
-import closeWithGrace from "close-with-grace";
-import fastify from "fastify";
-import app from "./app.js";
 import validateEnv from "./env.js";
 
 validateEnv();
+
+import closeWithGrace from "close-with-grace";
+import fastify from "fastify";
+import app from "./app.js";
 
 const server = fastify({ logger: true });
 
