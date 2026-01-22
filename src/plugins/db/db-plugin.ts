@@ -9,7 +9,7 @@ declare module "fastify" {
 }
 
 const dbPlugin: FastifyPluginAsync = async (fastify) => {
-	const sql = postgres(fastify.config.DATABASE_URL, { max: 10 });
+	const sql = postgres(process.env.DATABASE_URL!, { max: 10 });
 	fastify.decorate("db", sql);
 	fastify.addHook("onClose", async () => {
 		await sql.end();
