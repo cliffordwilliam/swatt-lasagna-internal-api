@@ -1,6 +1,9 @@
 import closeWithGrace from "close-with-grace";
 import fastify from "fastify";
 import app from "./app.js";
+import validateEnv from "./env.js";
+
+validateEnv();
 
 const server = fastify({ logger: true });
 
