@@ -12,7 +12,7 @@ async function seed() {
   console.log('Seeding database...');
 
   await sql`
-    INSERT INTO items (item_name, price) VALUES
+    INSERT INTO items (name, price) VALUES
       ('Lasagna Mini', 65000),
       ('Lasagna Small', 95000),
       ('Lasagna Medium', 180000),
