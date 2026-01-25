@@ -67,7 +67,8 @@ CREATE TABLE person_phones (
   phone_number VARCHAR(50) NOT NULL,
   is_preferred BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (person_id, phone_number)
 );
 
 CREATE UNIQUE INDEX idx_person_phones_person_id ON person_phones(person_id) WHERE is_preferred = TRUE;
@@ -99,7 +100,8 @@ CREATE TABLE person_addresses (
   address TEXT NOT NULL,
   is_preferred BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (person_id, address)
 );
 
 CREATE UNIQUE INDEX idx_person_addresses_person_id ON person_addresses(person_id) WHERE is_preferred = TRUE;
