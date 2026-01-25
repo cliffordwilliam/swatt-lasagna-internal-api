@@ -1,0 +1,35 @@
+import type { FastifyPluginAsync } from "fastify";
+import {
+	type CreateOrderInput,
+	CreateOrderSchema,
+	OrderDetailSchema,
+} from "./order-schema.js";
+import { OrderService } from "./order-service.js";
+
+const orderRoutes: FastifyPluginAsync = async (fastify) => {
+	const orderService = new OrderService(fastify.db);
+
+	fastify.post<{ Body: CreateOrderInput }>(
+		"/",
+		{
+			schema: {
+				body: CreateOrderSchema,
+				response: { 201: OrderDetailSchema },
+			},
+		},
+		async (request, reply) => {
+			try {
+				const order = await orderService.createOrder(request.body);
+				return reply.status(201).send(order);
+			} catch (error) {
+				// todo: create global error boundary
+				fastify.log.error(error);
+				return reply.status(500).send({
+					error: "Internal server error",
+				});
+			}
+		},
+	);
+};
+
+export default orderRoutes;
