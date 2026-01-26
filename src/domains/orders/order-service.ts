@@ -21,36 +21,46 @@ export class OrderService {
 	}
 
 	private async updatePhone(sql: Sql, personId: number, phone: string) {
-		// Explicit FOR UPDATE locks aren't necessary here, the unique partial index enforces the constraint
-		if (phone) {
+		// CTE ensures atomic operation: unset other preferred phones, then set this one as preferred
+		// The unique partial index enforces only one preferred phone per person
+		if (phone?.trim()) {
 			await sql`
-				UPDATE person_phones 
-				SET is_preferred = FALSE 
-				WHERE person_id = ${personId} AND is_preferred = TRUE
+				WITH unset_existing AS (
+					UPDATE person_phones 
+					SET is_preferred = FALSE 
+					WHERE person_id = ${personId} 
+						AND is_preferred = TRUE
+						AND phone_number != ${phone}
+				)
+				INSERT INTO person_phones (person_id, phone_number, is_preferred)
+				VALUES (${personId}, ${phone}, TRUE)
+				ON CONFLICT (person_id, phone_number) 
+				DO UPDATE SET 
+					is_preferred = TRUE, 
+					updated_at = CURRENT_TIMESTAMP
 			`;
-			await sql`
-                INSERT INTO person_phones (person_id, phone_number, is_preferred)
-                VALUES (${personId}, ${phone}, TRUE)
-                ON CONFLICT (person_id, phone_number) 
-                DO UPDATE SET is_preferred = TRUE, updated_at = CURRENT_TIMESTAMP
-            `;
 		}
 	}
 
 	private async updateAddress(sql: Sql, personId: number, address: string) {
-		// Explicit FOR UPDATE locks aren't necessary here, the unique partial index enforces the constraint
-		if (address) {
+		// CTE ensures atomic operation: unset other preferred addresses, then set this one as preferred
+		// The unique partial index enforces only one preferred address per person
+		if (address?.trim()) {
 			await sql`
-				UPDATE person_addresses 
-				SET is_preferred = FALSE 
-				WHERE person_id = ${personId} AND is_preferred = TRUE
+				WITH unset_existing AS (
+					UPDATE person_addresses 
+					SET is_preferred = FALSE 
+					WHERE person_id = ${personId} 
+						AND is_preferred = TRUE
+						AND address != ${address}
+				)
+				INSERT INTO person_addresses (person_id, address, is_preferred)
+				VALUES (${personId}, ${address}, TRUE)
+				ON CONFLICT (person_id, address) 
+				DO UPDATE SET 
+					is_preferred = TRUE, 
+					updated_at = CURRENT_TIMESTAMP
 			`;
-			await sql`
-                INSERT INTO person_addresses (person_id, address, is_preferred)
-                VALUES (${personId}, ${address}, TRUE)
-                ON CONFLICT (person_id, address) 
-                DO UPDATE SET is_preferred = TRUE, updated_at = CURRENT_TIMESTAMP
-            `;
 		}
 	}
 
@@ -61,14 +71,6 @@ export class OrderService {
 			throw new Error(
 				"Duplicate items detected. Please merge items into a single line.",
 			);
-		}
-
-		for (const item of orderData.items) {
-			if (item.quantity <= 0) {
-				throw new Error(
-					`Quantity minimum is 1. Invalid quantity ${item.quantity} for item ${item.item_id}`,
-				);
-			}
 		}
 
 		const isSamePerson = orderData.buyer.name === orderData.recipient.name;
