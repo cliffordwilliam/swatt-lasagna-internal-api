@@ -3,7 +3,8 @@ import orderRoutes from "./domains/orders/order-routes.js";
 import dbPlugin from "./plugins/db/db-plugin.js";
 
 const app: FastifyPluginAsync = async (fastify) => {
-	fastify.register(dbPlugin);
+	dbPlugin(fastify);
 	fastify.register(orderRoutes, { prefix: "orders" });
 };
+
 export default app;
