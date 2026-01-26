@@ -83,7 +83,7 @@ export interface ItemRow {
 }
 
 export interface OrderRow {
-	id: string;
+	id: number;
 	order_number: string;
 	order_date: Date;
 	delivery_date: Date;
@@ -100,5 +100,9 @@ export interface OrderRow {
 	subtotal_amount: number;
 	total_amount: number;
 	note: string | null;
+	buyer_name: string;
+	recipient_name: string;
+	is_active: boolean;
+	updated_at: Date;
 	created_at: Date;
 }

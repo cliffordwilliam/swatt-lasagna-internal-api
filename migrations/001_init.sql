@@ -50,7 +50,7 @@ INSERT INTO order_statuses (name) VALUES
 CREATE TABLE items (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  price NUMERIC(15, 2) NOT NULL CHECK (price >= 0),
+  price INTEGER NOT NULL CHECK (price >= 0),
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -102,9 +102,9 @@ CREATE TABLE orders (
   recipient_phone VARCHAR(50),
   recipient_address TEXT,
   recipient_name VARCHAR(255) NOT NULL,
-  shipping_cost NUMERIC(15, 2) NOT NULL CHECK (shipping_cost >= 0),
-  subtotal_amount NUMERIC(15, 2) NOT NULL CHECK (subtotal_amount >= 0),
-  total_amount NUMERIC(15, 2) NOT NULL CHECK (total_amount >= 0), -- no check for future possible discount
+  shipping_cost INTEGER NOT NULL CHECK (shipping_cost >= 0),
+  subtotal_amount INTEGER NOT NULL CHECK (subtotal_amount >= 0),
+  total_amount INTEGER NOT NULL CHECK (total_amount >= 0), -- no check for future possible discount
   note TEXT,
   buyer_id INTEGER NOT NULL REFERENCES persons(id),
   recipient_id INTEGER NOT NULL REFERENCES persons(id),
@@ -126,7 +126,7 @@ CREATE TABLE order_items (
   order_id BIGINT NOT NULL REFERENCES orders(id),
   item_id INTEGER NOT NULL REFERENCES items(id),
   item_name VARCHAR(255) NOT NULL,
-  item_price NUMERIC(15, 2) NOT NULL CHECK (item_price >= 0),
+  item_price INTEGER NOT NULL CHECK (item_price >= 0),
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -9,52 +9,49 @@ import type {
 export class OrderService {
 	constructor(private db: Sql) {}
 
-	private async upsertPerson(
-		sql: Sql,
-		name: string,
-		phone?: string,
-		address?: string,
-	) {
+	private async upsertPerson(sql: Sql, name: string) {
+		// Schema constraints handle name uniqueness, row lock new/existing person
 		const [person] = await sql<PersonRow[]>`
             INSERT INTO persons (name) 
             VALUES (${name})
             ON CONFLICT (name) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
             RETURNING id, name
         `;
+		return person;
+	}
 
+	private async updatePhone(sql: Sql, personId: number, phone: string) {
+		// Explicit FOR UPDATE locks aren't necessary here, the unique partial index enforces the constraint
 		if (phone) {
 			await sql`
-                UPDATE person_phones 
-                SET is_preferred = FALSE 
-                WHERE person_id = ${person.id}
-				AND is_preferred = TRUE
-				AND phone_number != ${phone}
-            `;
+				UPDATE person_phones 
+				SET is_preferred = FALSE 
+				WHERE person_id = ${personId} AND is_preferred = TRUE
+			`;
 			await sql`
                 INSERT INTO person_phones (person_id, phone_number, is_preferred)
-                VALUES (${person.id}, ${phone}, TRUE)
+                VALUES (${personId}, ${phone}, TRUE)
                 ON CONFLICT (person_id, phone_number) 
                 DO UPDATE SET is_preferred = TRUE, updated_at = CURRENT_TIMESTAMP
             `;
 		}
+	}
 
+	private async updateAddress(sql: Sql, personId: number, address: string) {
+		// Explicit FOR UPDATE locks aren't necessary here, the unique partial index enforces the constraint
 		if (address) {
 			await sql`
-                UPDATE person_addresses 
-                SET is_preferred = FALSE 
-                WHERE person_id = ${person.id}
-				AND is_preferred = TRUE
-				AND address != ${address}
-            `;
+				UPDATE person_addresses 
+				SET is_preferred = FALSE 
+				WHERE person_id = ${personId} AND is_preferred = TRUE
+			`;
 			await sql`
                 INSERT INTO person_addresses (person_id, address, is_preferred)
-                VALUES (${person.id}, ${address}, TRUE)
+                VALUES (${personId}, ${address}, TRUE)
                 ON CONFLICT (person_id, address) 
                 DO UPDATE SET is_preferred = TRUE, updated_at = CURRENT_TIMESTAMP
             `;
 		}
-
-		return person;
 	}
 
 	async createOrder(orderData: CreateOrderInput) {
@@ -74,22 +71,39 @@ export class OrderService {
 			}
 		}
 
+		const isSamePerson = orderData.buyer.name === orderData.recipient.name;
+		// Sort by name to ensure consistent lock ordering across persons
+		const [firstPerson, secondPerson, isBuyerFirst] =
+			orderData.buyer.name <= orderData.recipient.name
+				? [orderData.buyer, orderData.recipient, true]
+				: [orderData.recipient, orderData.buyer, false];
+
 		return await this.db.begin(async (sql) => {
-			const buyer = await this.upsertPerson(
-				sql,
-				orderData.buyer.name,
-				orderData.buyer.phone,
-				orderData.buyer.address,
-			);
-			const recipient = await this.upsertPerson(
-				sql,
-				orderData.recipient.name,
-				orderData.recipient.phone,
-				orderData.recipient.address,
-			);
+			const first = await this.upsertPerson(sql, firstPerson.name);
+			const second = isSamePerson
+				? first
+				: await this.upsertPerson(sql, secondPerson.name);
 
+			const buyer = isBuyerFirst ? first : second;
+			const recipient = isBuyerFirst ? second : first;
+			// One phone/address input per person
+			// So, sort persons by id is enough to ensure consistent lock ordering across persons
+			const updates = [
+				{ person: first, data: firstPerson },
+				...(isSamePerson ? [] : [{ person: second, data: secondPerson }]),
+			].sort((a, b) => a.person.id - b.person.id);
+
+			for (const { person, data } of updates) {
+				if (data.phone) {
+					await this.updatePhone(sql, person.id, data.phone);
+				}
+				if (data.address) {
+					await this.updateAddress(sql, person.id, data.address);
+				}
+			}
+			// Sort item ids to ensure consistent lock ordering across items
 			const sortedItemIds = [...itemIds].sort((a, b) => a - b);
-
+			// FOR UPDATE lock ensures item prices remain consistent during order creation
 			const masterItems = await sql<ItemRow[]>`
 				SELECT id, name, price 
 				FROM items 
@@ -98,9 +112,9 @@ export class OrderService {
 				FOR UPDATE
 			`;
 
-			if (masterItems.length !== itemIds.length) {
+			if (masterItems.length !== sortedItemIds.length) {
 				const foundIds = new Set(masterItems.map((m) => m.id));
-				const missingIds = itemIds.filter((id) => !foundIds.has(id));
+				const missingIds = sortedItemIds.filter((id) => !foundIds.has(id));
 				throw new Error(
 					`Items not found or inactive: ${missingIds.join(", ")}`,
 				);
@@ -108,22 +122,26 @@ export class OrderService {
 
 			let subtotalAmount = 0;
 
-			const itemsToInsert = orderData.items.map((reqItem) => {
-				const master = masterItems.find((m) => m.id === reqItem.item_id)!;
-				const price = Number(master.price);
+			const masterItemMap = new Map(masterItems.map((m) => [m.id, m]));
 
-				subtotalAmount += price * reqItem.quantity;
+			const itemsToInsert = orderData.items.map((reqItem) => {
+				const master = masterItemMap.get(reqItem.item_id)!;
+
+				subtotalAmount += master.price * reqItem.quantity;
 
 				return {
 					item_id: master.id,
 					item_name: master.name,
-					item_price: price,
+					item_price: master.price,
 					quantity: reqItem.quantity,
 				};
 			});
 
-			const totalAmount = subtotalAmount + Number(orderData.shipping_cost);
-
+			const totalAmount = subtotalAmount + orderData.shipping_cost;
+			// Foreign key existence handled by schema constraints
+			// delivery_date >= order_date check handled by schema constraints
+			// order_number uniqueness handled by schema constraints
+			// Non-negative amounts (shipping_cost, subtotal_amount, total_amount) handled by schema constraints
 			const [order] = await sql<OrderRow[]>`
                 INSERT INTO orders (
                     order_number, 
@@ -156,7 +174,7 @@ export class OrderService {
                     ${recipient.name},
                     ${orderData.recipient.phone ?? null}, 
                     ${orderData.recipient.address ?? null},
-                    ${orderData.delivery_method_id}, 
+                    ${orderData.delivery_method_id},
                     ${orderData.payment_method_id}, 
                     ${orderData.order_status_id},
                     ${orderData.shipping_cost}, 
