@@ -21,45 +21,41 @@ export class OrderService {
 	}
 
 	private async updatePhone(sql: Sql, personId: number, phone: string) {
-		// CTE ensures atomic operation: unset other preferred phones, then set this one as preferred
-		// The unique partial index enforces only one preferred phone per person
+		// Explicit FOR UPDATE locks aren't necessary here, the unique partial index enforces the constraint
 		if (phone?.trim()) {
+			// Insert first to lock the phone
 			await sql`
-				WITH unset_existing AS (
-					UPDATE person_phones 
-					SET is_preferred = FALSE 
-					WHERE person_id = ${personId} 
-						AND is_preferred = TRUE
-						AND phone_number != ${phone}
-				)
 				INSERT INTO person_phones (person_id, phone_number, is_preferred)
 				VALUES (${personId}, ${phone}, TRUE)
 				ON CONFLICT (person_id, phone_number) 
-				DO UPDATE SET 
-					is_preferred = TRUE, 
-					updated_at = CURRENT_TIMESTAMP
+				DO UPDATE SET is_preferred = TRUE, updated_at = CURRENT_TIMESTAMP
+			`;
+			await sql`
+				UPDATE person_phones 
+				SET is_preferred = FALSE 
+				WHERE person_id = ${personId} 
+					AND phone_number != ${phone}
+					AND is_preferred = TRUE
 			`;
 		}
 	}
 
 	private async updateAddress(sql: Sql, personId: number, address: string) {
-		// CTE ensures atomic operation: unset other preferred addresses, then set this one as preferred
-		// The unique partial index enforces only one preferred address per person
+		// Explicit FOR UPDATE locks aren't necessary here, the unique partial index enforces the constraint
 		if (address?.trim()) {
+			// Insert first to lock the address
 			await sql`
-				WITH unset_existing AS (
-					UPDATE person_addresses 
-					SET is_preferred = FALSE 
-					WHERE person_id = ${personId} 
-						AND is_preferred = TRUE
-						AND address != ${address}
-				)
 				INSERT INTO person_addresses (person_id, address, is_preferred)
 				VALUES (${personId}, ${address}, TRUE)
 				ON CONFLICT (person_id, address) 
-				DO UPDATE SET 
-					is_preferred = TRUE, 
-					updated_at = CURRENT_TIMESTAMP
+				DO UPDATE SET is_preferred = TRUE, updated_at = CURRENT_TIMESTAMP
+			`;
+			await sql`
+				UPDATE person_addresses 
+				SET is_preferred = FALSE 
+				WHERE person_id = ${personId} 
+					AND address != ${address}
+					AND is_preferred = TRUE
 			`;
 		}
 	}
