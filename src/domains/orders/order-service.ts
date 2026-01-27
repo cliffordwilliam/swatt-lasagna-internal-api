@@ -12,7 +12,8 @@ export class OrderService {
 	constructor(private db: Sql) {}
 
 	private async upsertPerson(sql: Sql, name: string) {
-		// Schema constraints handle name uniqueness, row lock new/existing person
+		// Winner may insert (invisible till commit) or update, loser updates (row-locked)
+		// Concurrent transactions may make duplicates but schema enforces unique
 		const [person] = await sql<PersonRow[]>`
             INSERT INTO persons (name) 
             VALUES (${name})
@@ -23,9 +24,9 @@ export class OrderService {
 	}
 
 	private async updatePhone(sql: Sql, personId: number, phone: string) {
-		// Explicit FOR UPDATE locks aren't necessary here, the unique partial index enforces the constraint
+		// Winner may insert (invisible till commit) or update, loser updates (row-locked)
+		// Concurrent transactions may make duplicates but schema enforces unique
 		if (phone?.trim()) {
-			// Insert first to lock the phone
 			await sql`
 				INSERT INTO person_phones (person_id, phone_number, is_preferred)
 				VALUES (${personId}, ${phone}, TRUE)
@@ -43,9 +44,7 @@ export class OrderService {
 	}
 
 	private async updateAddress(sql: Sql, personId: number, address: string) {
-		// Explicit FOR UPDATE locks aren't necessary here, the unique partial index enforces the constraint
 		if (address?.trim()) {
-			// Insert first to lock the address
 			await sql`
 				INSERT INTO person_addresses (person_id, address, is_preferred)
 				VALUES (${personId}, ${address}, TRUE)
@@ -65,7 +64,7 @@ export class OrderService {
 	private async createOrderTransaction(orderData: CreateOrderInput) {
 		const itemIds = orderData.items.map((i) => i.item_id);
 		const isSamePerson = orderData.buyer.name === orderData.recipient.name;
-		// Sort by name to ensure consistent lock ordering across persons
+		// Avoid deadlocks (upsert): update locked p1 <-> p2
 		const [firstPerson, secondPerson, isBuyerFirst] =
 			orderData.buyer.name <= orderData.recipient.name
 				? [orderData.buyer, orderData.recipient, true]
@@ -80,8 +79,7 @@ export class OrderService {
 
 			const buyer = isBuyerFirst ? first : second;
 			const recipient = isBuyerFirst ? second : first;
-			// One phone/address input per person
-			// So, sort persons by id is enough to ensure consistent lock ordering across persons
+			// Avoid deadlock (phone/address): update locked p1's stuff <-> p2
 			const updates = [
 				{ person: first, data: firstPerson },
 				...(isSamePerson ? [] : [{ person: second, data: secondPerson }]),
@@ -95,20 +93,18 @@ export class OrderService {
 					await this.updateAddress(sql, person.id, data.address);
 				}
 			}
-			// Sort item ids to ensure consistent lock ordering across items
-			const sortedItemIds = [...itemIds].sort((a, b) => a - b);
-			// FOR UPDATE lock is only for capturing item prices at the time of order creation
+			// FOR UPDATE force loser to wait until winner commits. For price snapshot
 			const masterItems = await sql<ItemRow[]>`
 				SELECT id, name, price 
 				FROM items 
-				WHERE id IN ${sql(sortedItemIds)} AND is_active = TRUE
+				WHERE id IN ${sql(itemIds)} AND is_active = TRUE
 				ORDER BY id
 				FOR UPDATE
 			`;
 
-			if (masterItems.length !== sortedItemIds.length) {
+			if (masterItems.length !== itemIds.length) {
 				const foundIds = new Set(masterItems.map((m) => m.id));
-				const missingIds = sortedItemIds.filter((id) => !foundIds.has(id));
+				const missingIds = itemIds.filter((id) => !foundIds.has(id));
 				throw new BadRequestError(
 					`Items not found or inactive: ${missingIds.join(", ")}`,
 				);
@@ -120,7 +116,7 @@ export class OrderService {
 
 			const itemsToInsert = orderData.items.map((reqItem) => {
 				const master = masterItemMap.get(reqItem.item_id)!;
-
+				// Schema enforces values here (INTEGER)
 				subtotalAmount += master.price * reqItem.quantity;
 
 				return {
@@ -132,10 +128,11 @@ export class OrderService {
 			});
 
 			const totalAmount = subtotalAmount + orderData.shipping_cost;
-			// Foreign key existence handled by schema constraints
-			// delivery_date >= order_date check handled by schema constraints
-			// order_number uniqueness handled by schema constraints
-			// Non-negative amounts (shipping_cost, subtotal_amount, total_amount) handled by schema constraints
+			// Handled by schema constraints:
+			// Foreign key existence
+			// delivery_date >= order_date
+			// order_number uniqueness (no retries)
+			// Non-negative amounts (shipping_cost, subtotal_amount, total_amount)
 			// is_active is a soft delete marker, not a hard constraint
 			const [order] = await sql<OrderRow[]>`
                 INSERT INTO orders (
@@ -198,7 +195,7 @@ export class OrderService {
 				"Duplicate items detected. Please merge items into a single line.",
 			);
 		}
-		// Item quantity validation handled by schema constraints
+		// orderData.items is empty validation handled by schema constraints
 
 		return await withRetry(() => this.createOrderTransaction(orderData));
 	}
