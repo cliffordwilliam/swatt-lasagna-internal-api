@@ -68,6 +68,7 @@ export class OrderService {
 				"Duplicate items detected. Please merge items into a single line.",
 			);
 		}
+		// Item quantity validation handled by schema constraints
 
 		const isSamePerson = orderData.buyer.name === orderData.recipient.name;
 		// Sort by name to ensure consistent lock ordering across persons
@@ -77,6 +78,7 @@ export class OrderService {
 				: [orderData.recipient, orderData.buyer, false];
 
 		return await this.db.begin(async (sql) => {
+			await sql`SET LOCAL statement_timeout = '30s'`;
 			const first = await this.upsertPerson(sql, firstPerson.name);
 			const second = isSamePerson
 				? first
@@ -101,7 +103,7 @@ export class OrderService {
 			}
 			// Sort item ids to ensure consistent lock ordering across items
 			const sortedItemIds = [...itemIds].sort((a, b) => a - b);
-			// FOR UPDATE lock ensures item prices remain consistent during order creation
+			// FOR UPDATE lock is only for capturing item prices at the time of order creation
 			const masterItems = await sql<ItemRow[]>`
 				SELECT id, name, price 
 				FROM items 
@@ -140,6 +142,7 @@ export class OrderService {
 			// delivery_date >= order_date check handled by schema constraints
 			// order_number uniqueness handled by schema constraints
 			// Non-negative amounts (shipping_cost, subtotal_amount, total_amount) handled by schema constraints
+			// is_active is a soft delete marker, not a hard constraint
 			const [order] = await sql<OrderRow[]>`
                 INSERT INTO orders (
                     order_number, 

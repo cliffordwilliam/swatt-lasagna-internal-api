@@ -27,27 +27,6 @@ export const CreateOrderSchema = Type.Object({
 
 export type CreateOrderInput = Static<typeof CreateOrderSchema>;
 
-const PersonResponseSchema = Type.Object({
-	id: Type.Number(),
-	name: Type.String(),
-	phone: Type.Union([Type.String(), Type.Null()]),
-	address: Type.Union([Type.String(), Type.Null()]),
-});
-
-const ReferenceDataSchema = Type.Object({
-	id: Type.Number(),
-	name: Type.String(),
-});
-
-const OrderItemResponseSchema = Type.Object({
-	id: Type.Number(),
-	item_id: Type.Number(),
-	item_name: Type.String(),
-	item_price: Type.Number(),
-	quantity: Type.Number(),
-	line_total: Type.Number(),
-});
-
 export const OrderDetailSchema = Type.Object({
 	id: Type.Number(),
 	order_number: Type.String(),
