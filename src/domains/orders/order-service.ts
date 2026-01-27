@@ -1,5 +1,6 @@
 import type { Sql } from "postgres";
 import { BadRequestError } from "../../lib/errors.js";
+import { withRetry } from "../../lib/retry.js";
 import type {
 	CreateOrderInput,
 	ItemRow,
@@ -61,16 +62,8 @@ export class OrderService {
 		}
 	}
 
-	async createOrder(orderData: CreateOrderInput) {
+	private async createOrderTransaction(orderData: CreateOrderInput) {
 		const itemIds = orderData.items.map((i) => i.item_id);
-
-		if (new Set(itemIds).size !== itemIds.length) {
-			throw new BadRequestError(
-				"Duplicate items detected. Please merge items into a single line.",
-			);
-		}
-		// Item quantity validation handled by schema constraints
-
 		const isSamePerson = orderData.buyer.name === orderData.recipient.name;
 		// Sort by name to ensure consistent lock ordering across persons
 		const [firstPerson, secondPerson, isBuyerFirst] =
@@ -195,5 +188,18 @@ export class OrderService {
 
 			return order;
 		});
+	}
+
+	async createOrder(orderData: CreateOrderInput) {
+		const itemIds = orderData.items.map((i) => i.item_id);
+
+		if (new Set(itemIds).size !== itemIds.length) {
+			throw new BadRequestError(
+				"Duplicate items detected. Please merge items into a single line.",
+			);
+		}
+		// Item quantity validation handled by schema constraints
+
+		return await withRetry(() => this.createOrderTransaction(orderData));
 	}
 }
