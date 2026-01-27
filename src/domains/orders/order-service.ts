@@ -1,4 +1,5 @@
 import type { Sql } from "postgres";
+import { BadRequestError } from "../../lib/errors.js";
 import type {
 	CreateOrderInput,
 	ItemRow,
@@ -64,7 +65,7 @@ export class OrderService {
 		const itemIds = orderData.items.map((i) => i.item_id);
 
 		if (new Set(itemIds).size !== itemIds.length) {
-			throw new Error(
+			throw new BadRequestError(
 				"Duplicate items detected. Please merge items into a single line.",
 			);
 		}
@@ -115,7 +116,7 @@ export class OrderService {
 			if (masterItems.length !== sortedItemIds.length) {
 				const foundIds = new Set(masterItems.map((m) => m.id));
 				const missingIds = sortedItemIds.filter((id) => !foundIds.has(id));
-				throw new Error(
+				throw new BadRequestError(
 					`Items not found or inactive: ${missingIds.join(", ")}`,
 				);
 			}

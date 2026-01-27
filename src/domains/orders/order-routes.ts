@@ -18,16 +18,8 @@ const orderRoutes: FastifyPluginAsync = async (fastify) => {
 			},
 		},
 		async (request, reply) => {
-			try {
-				const order = await orderService.createOrder(request.body);
-				return reply.status(201).send(order);
-			} catch (error) {
-				// todo: create global error boundary
-				fastify.log.error(error);
-				return reply.status(500).send({
-					error: "Internal server error",
-				});
-			}
+			const order = await orderService.createOrder(request.body);
+			return reply.status(201).send(order);
 		},
 	);
 };
