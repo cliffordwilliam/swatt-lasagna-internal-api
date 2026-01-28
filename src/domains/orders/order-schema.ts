@@ -36,6 +36,8 @@ export const OrderItemInputSchema = Type.Object({
 	quantity: Type.Number({ minimum: 1 }),
 });
 
+export type OrderItemInput = Static<typeof OrderItemInputSchema>;
+
 export const CreateOrderSchema = Type.Object({
 	order_number: Type.String({ minLength: 1 }),
 	order_date: Type.String({ format: "date-time" }),

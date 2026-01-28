@@ -36,11 +36,13 @@ export class OrderRepository {
 		sql: Sql,
 		personId: number,
 		phoneNumber: string,
-	): Promise<void> {
-		await sql`
+	): Promise<PhoneRow> {
+		const [phone] = await sql<PhoneRow[]>`
 			INSERT INTO person_phones (person_id, phone_number)
 			VALUES (${personId}, ${phoneNumber})
+			RETURNING id, person_id, phone_number
 		`;
+		return phone!;
 	}
 
 	async getAddressById(sql: Sql, id: number): Promise<AddressRow | undefined> {
@@ -54,11 +56,13 @@ export class OrderRepository {
 		sql: Sql,
 		personId: number,
 		addressValue: string,
-	): Promise<void> {
-		await sql`
+	): Promise<AddressRow> {
+		const [address] = await sql<AddressRow[]>`
 			INSERT INTO person_addresses (person_id, address)
 			VALUES (${personId}, ${addressValue})
+			RETURNING id, person_id, address
 		`;
+		return address!;
 	}
 
 	async getItemsByIds(sql: Sql, ids: number[]): Promise<ItemRow[]> {
