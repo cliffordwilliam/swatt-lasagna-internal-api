@@ -7,7 +7,7 @@ declare module "fastify" {
 	}
 }
 
-export default function dbPlugin(fastify: FastifyInstance) {
+export default function db(fastify: FastifyInstance) {
 	const sql = postgres(process.env.DATABASE_URL!, { max: 10 });
 	fastify.decorate("db", sql);
 	fastify.addHook("onClose", async () => {
