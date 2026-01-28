@@ -181,6 +181,11 @@ export class OrderService {
 
 	// Concurrent deletion/update can happen, its a tradeoff for real time state
 	async createOrder(orderData: CreateOrderInput): Promise<OrderDetailRow> {
+		if (new Date(orderData.delivery_date) < new Date(orderData.order_date)) {
+			throw new BadRequestError(
+				"delivery_date must be greater than or equal to order_date",
+			);
+		}
 		return await this.createOrderTransaction(orderData);
 	}
 }

@@ -5,7 +5,7 @@ export const PhoneInputSchema = Type.Union([
 		id: Type.Number(),
 	}),
 	Type.Object({
-		value: Type.String({ minLength: 1 }),
+		value: Type.String({ minLength: 1, maxLength: 25 }),
 	}),
 ]);
 
@@ -25,7 +25,7 @@ export const PersonInputSchema = Type.Union([
 		address: Type.Optional(AddressInputSchema),
 	}),
 	Type.Object({
-		name: Type.String({ minLength: 1 }),
+		name: Type.String({ minLength: 1, maxLength: 255 }),
 		phone: Type.Optional(PhoneInputSchema),
 		address: Type.Optional(AddressInputSchema),
 	}),
@@ -37,7 +37,7 @@ export const OrderItemInputSchema = Type.Object({
 });
 
 export const CreateOrderSchema = Type.Object({
-	order_number: Type.String(),
+	order_number: Type.String({ minLength: 1 }),
 	order_date: Type.String({ format: "date-time" }),
 	delivery_date: Type.String({ format: "date-time" }),
 	buyer: PersonInputSchema,
@@ -54,23 +54,23 @@ export type CreateOrderInput = Static<typeof CreateOrderSchema>;
 
 export const OrderDetailSchema = Type.Object({
 	id: Type.Number(),
-	order_number: Type.String(),
+	order_number: Type.String({ minLength: 1 }),
 	order_date: Type.String({ format: "date-time" }),
 	delivery_date: Type.String({ format: "date-time" }),
 	buyer_id: Type.Number(),
-	buyer_name: Type.String(),
-	buyer_phone: Type.Union([Type.String(), Type.Null()]),
+	buyer_name: Type.String({ minLength: 1, maxLength: 255 }),
+	buyer_phone: Type.Union([Type.String({ maxLength: 25 }), Type.Null()]),
 	buyer_address: Type.Union([Type.String(), Type.Null()]),
 	recipient_id: Type.Number(),
-	recipient_name: Type.String(),
-	recipient_phone: Type.Union([Type.String(), Type.Null()]),
+	recipient_name: Type.String({ minLength: 1, maxLength: 255 }),
+	recipient_phone: Type.Union([Type.String({ maxLength: 25 }), Type.Null()]),
 	recipient_address: Type.Union([Type.String(), Type.Null()]),
 	delivery_method_id: Type.Number(),
 	payment_method_id: Type.Number(),
 	order_status_id: Type.Number(),
-	shipping_cost: Type.Number(),
-	subtotal_amount: Type.Number(),
-	total_amount: Type.Number(),
+	shipping_cost: Type.Number({ minimum: 0 }),
+	subtotal_amount: Type.Number({ minimum: 0 }),
+	total_amount: Type.Number({ minimum: 0 }),
 	note: Type.Union([Type.String(), Type.Null()]),
 	created_at: Type.String({ format: "date-time" }),
 });
