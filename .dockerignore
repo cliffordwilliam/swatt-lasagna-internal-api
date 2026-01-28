@@ -1,5 +1,6 @@
 .git
 .husky
+docs
 node_modules
 .dockerignore
 .env

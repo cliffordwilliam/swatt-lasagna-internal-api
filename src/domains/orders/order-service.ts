@@ -1,202 +1,186 @@
 import type { Sql } from "postgres";
 import { BadRequestError } from "../../lib/errors.js";
-import { withRetry } from "../../lib/retry.js";
+import { OrderRepository } from "./order-repository.js";
 import type {
 	CreateOrderInput,
-	ItemRow,
-	OrderRow,
+	OrderDetailRow,
+	OrderItemInsert,
 	PersonRow,
 } from "./order-schema.js";
 
 export class OrderService {
+	private repo = new OrderRepository();
+
 	constructor(private db: Sql) {}
 
-	private async upsertPerson(sql: Sql, name: string) {
-		// Winner may insert (invisible till commit) or update, loser updates (row-locked)
-		// Concurrent transactions may make duplicates but schema enforces unique
-		const [person] = await sql<PersonRow[]>`
-            INSERT INTO persons (name) 
-            VALUES (${name})
-            ON CONFLICT (name) DO UPDATE SET updated_at = CURRENT_TIMESTAMP
-            RETURNING id, name
-        `;
-		return person;
-	}
-
-	private async updatePhone(sql: Sql, personId: number, phone: string) {
-		// Winner may insert (invisible till commit) or update, loser updates (row-locked)
-		// Concurrent transactions may make duplicates but schema enforces unique
-		if (phone?.trim()) {
-			await sql`
-				INSERT INTO person_phones (person_id, phone_number, is_preferred)
-				VALUES (${personId}, ${phone}, TRUE)
-				ON CONFLICT (person_id, phone_number) 
-				DO UPDATE SET is_preferred = TRUE, updated_at = CURRENT_TIMESTAMP
-			`;
-			await sql`
-				UPDATE person_phones 
-				SET is_preferred = FALSE 
-				WHERE person_id = ${personId} 
-					AND phone_number != ${phone}
-					AND is_preferred = TRUE
-			`;
-		}
-	}
-
-	private async updateAddress(sql: Sql, personId: number, address: string) {
-		if (address?.trim()) {
-			await sql`
-				INSERT INTO person_addresses (person_id, address, is_preferred)
-				VALUES (${personId}, ${address}, TRUE)
-				ON CONFLICT (person_id, address) 
-				DO UPDATE SET is_preferred = TRUE, updated_at = CURRENT_TIMESTAMP
-			`;
-			await sql`
-				UPDATE person_addresses 
-				SET is_preferred = FALSE 
-				WHERE person_id = ${personId} 
-					AND address != ${address}
-					AND is_preferred = TRUE
-			`;
-		}
-	}
-
-	private async createOrderTransaction(orderData: CreateOrderInput) {
-		const itemIds = orderData.items.map((i) => i.item_id);
-		const isSamePerson = orderData.buyer.name === orderData.recipient.name;
-		// Avoid deadlocks (upsert): update locked p1 <-> p2
-		const [firstPerson, secondPerson, isBuyerFirst] =
-			orderData.buyer.name <= orderData.recipient.name
-				? [orderData.buyer, orderData.recipient, true]
-				: [orderData.recipient, orderData.buyer, false];
-
-		return await this.db.begin(async (sql) => {
-			await sql`SET LOCAL statement_timeout = '30s'`;
-			const first = await this.upsertPerson(sql, firstPerson.name);
-			const second = isSamePerson
-				? first
-				: await this.upsertPerson(sql, secondPerson.name);
-
-			const buyer = isBuyerFirst ? first : second;
-			const recipient = isBuyerFirst ? second : first;
-			// Avoid deadlock (phone/address): update locked p1's stuff <-> p2
-			const updates = [
-				{ person: first, data: firstPerson },
-				...(isSamePerson ? [] : [{ person: second, data: secondPerson }]),
-			].sort((a, b) => a.person.id - b.person.id);
-
-			for (const { person, data } of updates) {
-				if (data.phone) {
-					await this.updatePhone(sql, person.id, data.phone);
-				}
-				if (data.address) {
-					await this.updateAddress(sql, person.id, data.address);
-				}
+	private async resolvePerson(
+		sql: Sql,
+		personInput: { id?: number; name?: string },
+	): Promise<PersonRow> {
+		if (personInput.id !== undefined) {
+			const person = await this.repo.getPersonById(sql, personInput.id);
+			if (!person) {
+				throw new BadRequestError(`Person with id ${personInput.id} not found`);
 			}
-			// FOR UPDATE force loser to wait until winner commits. For price snapshot
-			const masterItems = await sql<ItemRow[]>`
-				SELECT id, name, price 
-				FROM items 
-				WHERE id IN ${sql(itemIds)} AND is_active = TRUE
-				ORDER BY id
-				FOR UPDATE
-			`;
+			return person;
+		}
+		if (personInput.name) {
+			return await this.repo.createPerson(sql, personInput.name);
+		}
+		throw new BadRequestError(
+			"Either person id or person name must be provided",
+		);
+	}
 
-			if (masterItems.length !== itemIds.length) {
-				const foundIds = new Set(masterItems.map((m) => m.id));
-				const missingIds = itemIds.filter((id) => !foundIds.has(id));
+	private async resolvePhone(
+		sql: Sql,
+		personId: number,
+		phoneInput: { id?: number; value?: string } | undefined,
+	): Promise<string | null> {
+		if (!phoneInput) return null;
+
+		if (phoneInput.id !== undefined) {
+			const phone = await this.repo.getPhoneById(sql, phoneInput.id);
+			if (!phone) {
+				throw new BadRequestError(`Phone with id ${phoneInput.id} not found`);
+			}
+			if (phone.person_id !== personId) {
 				throw new BadRequestError(
-					`Items not found or inactive: ${missingIds.join(", ")}`,
+					`Phone with id ${phoneInput.id} does not belong to person ${personId}`,
 				);
 			}
+			return phone.phone_number;
+		}
+		if (phoneInput.value) {
+			await this.repo.createPhone(sql, personId, phoneInput.value);
+			return phoneInput.value;
+		}
+		throw new BadRequestError(
+			"Either phone id or phone value must be provided",
+		);
+	}
+
+	private async resolveAddress(
+		sql: Sql,
+		personId: number,
+		addressInput: { id?: number; value?: string } | undefined,
+	): Promise<string | null> {
+		if (!addressInput) return null;
+
+		if (addressInput.id !== undefined) {
+			const address = await this.repo.getAddressById(sql, addressInput.id);
+			if (!address) {
+				throw new BadRequestError(
+					`Address with id ${addressInput.id} not found`,
+				);
+			}
+			if (address.person_id !== personId) {
+				throw new BadRequestError(
+					`Address with id ${addressInput.id} does not belong to person ${personId}`,
+				);
+			}
+			return address.address;
+		}
+		if (addressInput.value) {
+			await this.repo.createAddress(sql, personId, addressInput.value);
+			return addressInput.value;
+		}
+		throw new BadRequestError(
+			"Either address id or address value must be provided",
+		);
+	}
+
+	private async createOrderTransaction(
+		orderData: CreateOrderInput,
+	): Promise<OrderDetailRow> {
+		return await this.db.begin(async (sql) => {
+			await sql`SET LOCAL statement_timeout = '30s'`;
+
+			const buyer = await this.resolvePerson(sql, orderData.buyer);
+			const buyerPhone = await this.resolvePhone(
+				sql,
+				buyer.id,
+				orderData.buyer.phone,
+			);
+			const buyerAddress = await this.resolveAddress(
+				sql,
+				buyer.id,
+				orderData.buyer.address,
+			);
+
+			const recipient = await this.resolvePerson(sql, orderData.recipient);
+			const recipientPhone = await this.resolvePhone(
+				sql,
+				recipient.id,
+				orderData.recipient.phone,
+			);
+			const recipientAddress = await this.resolveAddress(
+				sql,
+				recipient.id,
+				orderData.recipient.address,
+			);
+
+			const itemIds = orderData.items.map((i) => i.item_id);
+			const items = await this.repo.getItemsByIds(sql, itemIds);
+			const itemMap = new Map(items.map((m) => [m.id, m]));
 
 			let subtotalAmount = 0;
-
-			const masterItemMap = new Map(masterItems.map((m) => [m.id, m]));
-
-			const itemsToInsert = orderData.items.map((reqItem) => {
-				const master = masterItemMap.get(reqItem.item_id)!;
-				// Schema enforces values here (INTEGER)
-				subtotalAmount += master.price * reqItem.quantity;
-
-				return {
-					item_id: master.id,
-					item_name: master.name,
-					item_price: master.price,
-					quantity: reqItem.quantity,
-				};
-			});
+			const itemsToInsert: OrderItemInsert[] = orderData.items.map(
+				(reqItem) => {
+					const item = itemMap.get(reqItem.item_id);
+					if (!item) {
+						// Could happen if concurrent deletion happens
+						throw new BadRequestError(
+							`Item with id ${reqItem.item_id} not found`,
+						);
+					}
+					subtotalAmount += item.price * reqItem.quantity;
+					return {
+						order_id: 0,
+						item_id: item.id,
+						item_name: item.name,
+						item_price: item.price,
+						quantity: reqItem.quantity,
+					};
+				},
+			);
 
 			const totalAmount = subtotalAmount + orderData.shipping_cost;
-			// Handled by schema constraints:
-			// Foreign key existence
-			// delivery_date >= order_date
-			// order_number uniqueness (no retries)
-			// Non-negative amounts (shipping_cost, subtotal_amount, total_amount)
-			// is_active is a soft delete marker, not a hard constraint
-			const [order] = await sql<OrderRow[]>`
-                INSERT INTO orders (
-                    order_number, 
-                    order_date, 
-                    delivery_date,
-                    buyer_id, 
-                    recipient_id,
-                    buyer_name,
-                    buyer_phone, 
-                    buyer_address,
-                    recipient_name,
-                    recipient_phone, 
-                    recipient_address,
-                    delivery_method_id, 
-                    payment_method_id, 
-                    order_status_id,
-                    shipping_cost, 
-                    subtotal_amount, 
-                    total_amount,
-                    note
-                ) VALUES (
-                    ${orderData.order_number}, 
-                    ${orderData.order_date}, 
-                    ${orderData.delivery_date},
-                    ${buyer.id}, 
-                    ${recipient.id},
-                    ${buyer.name},
-                    ${orderData.buyer.phone ?? null}, 
-                    ${orderData.buyer.address ?? null},
-                    ${recipient.name},
-                    ${orderData.recipient.phone ?? null}, 
-                    ${orderData.recipient.address ?? null},
-                    ${orderData.delivery_method_id},
-                    ${orderData.payment_method_id}, 
-                    ${orderData.order_status_id},
-                    ${orderData.shipping_cost}, 
-                    ${subtotalAmount}, 
-                    ${totalAmount},
-                    ${orderData.note ?? null}
-                ) RETURNING *
-            `;
 
-			const finalItems = itemsToInsert.map((item) => ({
+			const insertedOrder = await this.repo.insertOrder(sql, orderData, {
+				buyerId: buyer.id,
+				buyerName: buyer.name,
+				buyerPhone,
+				buyerAddress,
+				recipientId: recipient.id,
+				recipientName: recipient.name,
+				recipientPhone,
+				recipientAddress,
+				subtotalAmount,
+				totalAmount,
+			});
+
+			const finalItems: OrderItemInsert[] = itemsToInsert.map((item) => ({
 				...item,
-				order_id: order.id,
+				order_id: insertedOrder.id,
 			}));
+			await this.repo.insertOrderItems(sql, finalItems);
 
-			await sql`INSERT INTO order_items ${sql(finalItems)}`;
-
-			return order;
+			const orderDetail = await this.repo.getOrderDetailById(
+				sql,
+				insertedOrder.id,
+			);
+			if (!orderDetail) {
+				throw new BadRequestError(
+					`Order with id ${insertedOrder.id} not found after insert`,
+				);
+			}
+			return orderDetail;
 		});
 	}
 
-	async createOrder(orderData: CreateOrderInput) {
-		const itemIds = orderData.items.map((i) => i.item_id);
-
-		if (new Set(itemIds).size !== itemIds.length) {
-			throw new BadRequestError(
-				"Duplicate items detected. Please merge items into a single line.",
-			);
-		}
-		// orderData.items is empty validation handled by schema constraints
-
-		return await withRetry(() => this.createOrderTransaction(orderData));
+	// Concurrent deletion/update can happen, its a tradeoff for real time state
+	async createOrder(orderData: CreateOrderInput): Promise<OrderDetailRow> {
+		return await this.createOrderTransaction(orderData);
 	}
 }

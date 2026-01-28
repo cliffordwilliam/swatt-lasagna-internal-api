@@ -1,10 +1,35 @@
 import { type Static, Type } from "@sinclair/typebox";
 
-export const PersonInputSchema = Type.Object({
-	name: Type.String({ minLength: 1 }),
-	phone: Type.Optional(Type.String()),
-	address: Type.Optional(Type.String()),
-});
+export const PhoneInputSchema = Type.Union([
+	Type.Object({
+		id: Type.Number(),
+	}),
+	Type.Object({
+		value: Type.String({ minLength: 1 }),
+	}),
+]);
+
+export const AddressInputSchema = Type.Union([
+	Type.Object({
+		id: Type.Number(),
+	}),
+	Type.Object({
+		value: Type.String({ minLength: 1 }),
+	}),
+]);
+
+export const PersonInputSchema = Type.Union([
+	Type.Object({
+		id: Type.Number(),
+		phone: Type.Optional(PhoneInputSchema),
+		address: Type.Optional(AddressInputSchema),
+	}),
+	Type.Object({
+		name: Type.String({ minLength: 1 }),
+		phone: Type.Optional(PhoneInputSchema),
+		address: Type.Optional(AddressInputSchema),
+	}),
+]);
 
 export const OrderItemInputSchema = Type.Object({
 	item_id: Type.Number(),
@@ -12,7 +37,7 @@ export const OrderItemInputSchema = Type.Object({
 });
 
 export const CreateOrderSchema = Type.Object({
-	order_number: Type.String({ minLength: 1 }),
+	order_number: Type.String(),
 	order_date: Type.String({ format: "date-time" }),
 	delivery_date: Type.String({ format: "date-time" }),
 	buyer: PersonInputSchema,
@@ -50,6 +75,31 @@ export const OrderDetailSchema = Type.Object({
 	created_at: Type.String({ format: "date-time" }),
 });
 
+export type OrderDetail = Static<typeof OrderDetailSchema>;
+
+export interface OrderDetailRow {
+	id: number;
+	order_number: string;
+	order_date: Date;
+	delivery_date: Date;
+	buyer_id: number;
+	buyer_name: string;
+	buyer_phone: string | null;
+	buyer_address: string | null;
+	recipient_id: number;
+	recipient_name: string;
+	recipient_phone: string | null;
+	recipient_address: string | null;
+	delivery_method_id: number;
+	payment_method_id: number;
+	order_status_id: number;
+	shipping_cost: number;
+	subtotal_amount: number;
+	total_amount: number;
+	note: string | null;
+	created_at: Date;
+}
+
 export interface PersonRow {
 	id: number;
 	name: string;
@@ -66,22 +116,41 @@ export interface OrderRow {
 	order_number: string;
 	order_date: Date;
 	delivery_date: Date;
+	shipping_cost: number;
+	subtotal_amount: number;
+	total_amount: number;
+	note: string | null;
 	buyer_id: number;
+	buyer_name: string;
 	buyer_phone: string | null;
 	buyer_address: string | null;
 	recipient_id: number;
+	recipient_name: string;
 	recipient_phone: string | null;
 	recipient_address: string | null;
 	delivery_method_id: number;
 	payment_method_id: number;
 	order_status_id: number;
-	shipping_cost: number;
-	subtotal_amount: number;
-	total_amount: number;
-	note: string | null;
-	buyer_name: string;
-	recipient_name: string;
-	is_active: boolean;
-	updated_at: Date;
 	created_at: Date;
+	updated_at: Date;
+}
+
+export interface PhoneRow {
+	id: number;
+	person_id: number;
+	phone_number: string;
+}
+
+export interface AddressRow {
+	id: number;
+	person_id: number;
+	address: string;
+}
+
+export interface OrderItemInsert {
+	order_id: number;
+	item_id: number;
+	item_name: string;
+	item_price: number;
+	quantity: number;
 }
