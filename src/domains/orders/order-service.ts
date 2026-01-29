@@ -308,13 +308,13 @@ export class OrderService {
 		return { subtotalAmount, itemsToInsert };
 	}
 
-	// Concurrent deletion/update is allowed
-	// Because it is super unlikely during order creation that the following are deleted/updated:
+	// Concurrent deletion/update is allowed because
+	// It is super unlikely during order create/update that the following are deleted/updated:
 	// - Item
 	// - Delivery method
 	// - Payment method
 	// - Order status
-	// Because order is made/updated per phone call, unlikely for two calls to make the same order
+	// Order is per phone call, super unlikely for two calls to make/update the same order
 	private async _prepareOrderTransaction(
 		sql: Sql,
 		orderData: CreateOrderInput,
