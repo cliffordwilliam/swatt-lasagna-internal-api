@@ -308,13 +308,13 @@ export class OrderService {
 		return { subtotalAmount, itemsToInsert };
 	}
 
-	// Concurrent deletion/update is allowed because
-	// It is super unlikely during order create/update that the following are deleted/updated:
-	// - Item
-	// - Delivery method
-	// - Payment method
-	// - Order status
-	// Order is per phone call, super unlikely for two calls to make/update the same order
+	// Concurrent operations handling:
+	// - Item/DeliveryMethod/PaymentMethod/OrderStatus deletion during order create/update
+	//   will cause NotFoundError - acceptable as these are rare admin operations
+	// - Item price changes during order entry will use the price at query time
+	//   (historical pricing snapshot) - this is intentional
+	// - Multiple employees creating/updating the SAME order simultaneously is not handled
+	//   but is extremely unlikely in our phone-order workflow (one call = one order)
 	private async _prepareOrderTransaction(
 		sql: Sql,
 		orderData: CreateOrderInput,
