@@ -136,3 +136,15 @@ export interface OrderItemInsert {
 }
 
 export type OrderItemValues = Omit<OrderItemInsert, "order_id">;
+
+export type PreparedOrderData = {
+	buyer: PersonRow;
+	recipient: PersonRow;
+	buyerPhone: PhoneRow | null;
+	buyerAddress: AddressRow | null;
+	recipientPhone: PhoneRow | null;
+	recipientAddress: AddressRow | null;
+	subtotalAmount: number;
+	totalAmount: number;
+	itemsToInsert: OrderItemValues[];
+};
