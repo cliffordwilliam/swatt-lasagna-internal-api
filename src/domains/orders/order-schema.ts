@@ -2,7 +2,7 @@ import { type Static, Type } from "@sinclair/typebox";
 
 export const PhoneInputSchema = Type.Union([
 	Type.Object({
-		id: Type.Number(),
+		id: Type.Integer(),
 	}),
 	Type.Object({
 		value: Type.String({ minLength: 1, maxLength: 25 }),
@@ -11,16 +11,16 @@ export const PhoneInputSchema = Type.Union([
 
 export const AddressInputSchema = Type.Union([
 	Type.Object({
-		id: Type.Number(),
+		id: Type.Integer(),
 	}),
 	Type.Object({
-		value: Type.String({ minLength: 1 }),
+		value: Type.String({ minLength: 1, maxLength: 500 }),
 	}),
 ]);
 
 export const PersonInputSchema = Type.Union([
 	Type.Object({
-		id: Type.Number(),
+		id: Type.Integer(),
 		phone: Type.Optional(PhoneInputSchema),
 		address: Type.Optional(AddressInputSchema),
 	}),
@@ -32,8 +32,8 @@ export const PersonInputSchema = Type.Union([
 ]);
 
 export const OrderItemInputSchema = Type.Object({
-	item_id: Type.Number(),
-	quantity: Type.Number({ minimum: 1 }),
+	item_id: Type.Integer(),
+	quantity: Type.Integer({ minimum: 1, maximum: 10000 }),
 });
 
 export type OrderItemInput = Static<typeof OrderItemInputSchema>;
@@ -44,10 +44,10 @@ export const CreateOrderSchema = Type.Object({
 	delivery_date: Type.String({ format: "date-time" }),
 	buyer: PersonInputSchema,
 	recipient: PersonInputSchema,
-	delivery_method_id: Type.Number(),
-	payment_method_id: Type.Number(),
-	order_status_id: Type.Number(),
-	shipping_cost: Type.Number({ minimum: 0 }),
+	delivery_method_id: Type.Integer(),
+	payment_method_id: Type.Integer(),
+	order_status_id: Type.Integer(),
+	shipping_cost: Type.Integer({ minimum: 0, maximum: 1000000 }),
 	note: Type.Optional(Type.String()),
 	items: Type.Array(OrderItemInputSchema, { minItems: 1 }),
 });
@@ -55,24 +55,24 @@ export const CreateOrderSchema = Type.Object({
 export type CreateOrderInput = Static<typeof CreateOrderSchema>;
 
 export const OrderSchema = Type.Object({
-	id: Type.Number(),
+	id: Type.Integer(),
 	order_number: Type.String({ minLength: 1 }),
 	order_date: Type.String({ format: "date-time" }),
 	delivery_date: Type.String({ format: "date-time" }),
-	buyer_id: Type.Number(),
+	buyer_id: Type.Integer(),
 	buyer_name: Type.String({ minLength: 1, maxLength: 255 }),
 	buyer_phone: Type.Union([Type.String({ maxLength: 25 }), Type.Null()]),
-	buyer_address: Type.Union([Type.String(), Type.Null()]),
-	recipient_id: Type.Number(),
+	buyer_address: Type.Union([Type.String({ maxLength: 500 }), Type.Null()]),
+	recipient_id: Type.Integer(),
 	recipient_name: Type.String({ minLength: 1, maxLength: 255 }),
 	recipient_phone: Type.Union([Type.String({ maxLength: 25 }), Type.Null()]),
-	recipient_address: Type.Union([Type.String(), Type.Null()]),
-	delivery_method_id: Type.Number(),
-	payment_method_id: Type.Number(),
-	order_status_id: Type.Number(),
-	shipping_cost: Type.Number({ minimum: 0 }),
-	subtotal_amount: Type.Number({ minimum: 0 }),
-	total_amount: Type.Number({ minimum: 0 }),
+	recipient_address: Type.Union([Type.String({ maxLength: 500 }), Type.Null()]),
+	delivery_method_id: Type.Integer(),
+	payment_method_id: Type.Integer(),
+	order_status_id: Type.Integer(),
+	shipping_cost: Type.Integer({ minimum: 0, maximum: 1000000 }),
+	subtotal_amount: Type.Integer({ minimum: 0 }),
+	total_amount: Type.Integer({ minimum: 0 }),
 	note: Type.Union([Type.String(), Type.Null()]),
 	created_at: Type.String({ format: "date-time" }),
 	updated_at: Type.String({ format: "date-time" }),
