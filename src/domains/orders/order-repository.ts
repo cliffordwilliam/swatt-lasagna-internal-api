@@ -275,4 +275,32 @@ export class OrderRepository {
 		`;
 		return status;
 	}
+
+	async getAllOrders(sql: Sql): Promise<OrderRow[]> {
+		return await sql<OrderRow[]>`
+			SELECT
+				id,
+				order_number,
+				order_date,
+				delivery_date,
+				buyer_id,
+				buyer_name,
+				buyer_phone,
+				buyer_address,
+				recipient_id,
+				recipient_name,
+				recipient_phone,
+				recipient_address,
+				delivery_method_id,
+				payment_method_id,
+				order_status_id,
+				shipping_cost,
+				subtotal_amount,
+				total_amount,
+				note,
+				created_at,
+				updated_at
+			FROM orders
+		`;
+	}
 }

@@ -78,6 +78,8 @@ export const OrderSchema = Type.Object({
 	updated_at: Type.String({ format: "date-time" }),
 });
 
+export const OrdersSchema = Type.Array(OrderSchema);
+
 export type Order = Static<typeof OrderSchema>;
 
 export interface OrderRow {

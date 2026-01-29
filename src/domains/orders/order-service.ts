@@ -128,6 +128,10 @@ export class OrderService {
 		});
 	}
 
+	async getAllOrders(): Promise<OrderRow[]> {
+		return await this.repo.getAllOrders(this.db);
+	}
+
 	private async _resolvePerson(
 		sql: Sql,
 		personInput: { id?: number; name?: string },
