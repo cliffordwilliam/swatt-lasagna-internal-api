@@ -134,3 +134,5 @@ export interface OrderItemInsert {
 	item_price: number;
 	quantity: number;
 }
+
+export type OrderItemValues = Omit<OrderItemInsert, "order_id">;

@@ -156,4 +156,44 @@ export class OrderRepository {
 	async insertOrderItems(sql: Sql, items: OrderItemInsert[]): Promise<void> {
 		await sql`INSERT INTO order_items ${sql(items)}`;
 	}
+
+	async getOrderNumber(
+		sql: Sql,
+		orderNumber: string,
+	): Promise<{ id: number } | undefined> {
+		const [order] = await sql<{ id: number }[]>`
+			SELECT id FROM orders WHERE order_number = ${orderNumber}
+		`;
+		return order;
+	}
+
+	async getDeliveryMethodById(
+		sql: Sql,
+		id: number,
+	): Promise<{ id: number } | undefined> {
+		const [method] = await sql<{ id: number }[]>`
+			SELECT id FROM delivery_methods WHERE id = ${id}
+		`;
+		return method;
+	}
+
+	async getPaymentMethodById(
+		sql: Sql,
+		id: number,
+	): Promise<{ id: number } | undefined> {
+		const [method] = await sql<{ id: number }[]>`
+			SELECT id FROM payment_methods WHERE id = ${id}
+		`;
+		return method;
+	}
+
+	async getOrderStatusById(
+		sql: Sql,
+		id: number,
+	): Promise<{ id: number } | undefined> {
+		const [status] = await sql<{ id: number }[]>`
+			SELECT id FROM order_statuses WHERE id = ${id}
+		`;
+		return status;
+	}
 }

@@ -11,6 +11,7 @@ import type {
 	CreateOrderInput,
 	OrderItemInput,
 	OrderItemInsert,
+	OrderItemValues,
 	OrderRow,
 	PersonRow,
 	PhoneRow,
@@ -111,44 +112,98 @@ export class OrderService {
 		}
 	}
 
+	private async validateOrderNumber(
+		sql: Sql,
+		orderNumber: string,
+	): Promise<void> {
+		const existingOrder = await this.repo.getOrderNumber(sql, orderNumber);
+		if (existingOrder) {
+			throw new ConflictError(
+				`Order with number ${orderNumber} already exists`,
+			);
+		}
+	}
+
+	private async validateDeliveryMethod(
+		sql: Sql,
+		deliveryMethodId: number,
+	): Promise<void> {
+		const deliveryMethod = await this.repo.getDeliveryMethodById(
+			sql,
+			deliveryMethodId,
+		);
+		if (!deliveryMethod) {
+			throw new NotFoundError(
+				`Delivery method with id ${deliveryMethodId} not found`,
+			);
+		}
+	}
+
+	private async validatePaymentMethod(
+		sql: Sql,
+		paymentMethodId: number,
+	): Promise<void> {
+		const paymentMethod = await this.repo.getPaymentMethodById(
+			sql,
+			paymentMethodId,
+		);
+		if (!paymentMethod) {
+			throw new NotFoundError(
+				`Payment method with id ${paymentMethodId} not found`,
+			);
+		}
+	}
+
+	private async validateOrderStatus(
+		sql: Sql,
+		orderStatusId: number,
+	): Promise<void> {
+		const orderStatus = await this.repo.getOrderStatusById(sql, orderStatusId);
+		if (!orderStatus) {
+			throw new NotFoundError(
+				`Order status with id ${orderStatusId} not found`,
+			);
+		}
+	}
+
 	async createOrder(orderData: CreateOrderInput): Promise<OrderRow> {
 		this.validateOrderDates(orderData.order_date, orderData.delivery_date);
 		this.validateNoDuplicateItems(orderData.items);
 
-		// Concurrent deletion/update is possible, tradeoff for real time state
-		return await this.db.begin(async (sql) => {
+		// Concurrent deletion/update is allowed
+		// Because it is super unlikely during order creation that the following are deleted/updated:
+		// - Item
+		// - Delivery method
+		// - Payment method
+		// - Order status
+		// Because order is made per phone call, unlikely for two phone calls to make the same order
+		return await this.db.begin("read committed", async (sql) => {
 			await sql`SET LOCAL statement_timeout = '30s'`;
 
-			const buyer = await this.resolvePerson(sql, orderData.buyer);
-			const buyerPhone = await this.resolvePhone(
-				sql,
-				buyer.id,
-				orderData.buyer.phone,
-			);
-			const buyerAddress = await this.resolveAddress(
-				sql,
-				buyer.id,
-				orderData.buyer.address,
-			);
+			await this.validateOrderNumber(sql, orderData.order_number);
+			await this.validateDeliveryMethod(sql, orderData.delivery_method_id);
+			await this.validatePaymentMethod(sql, orderData.payment_method_id);
+			await this.validateOrderStatus(sql, orderData.order_status_id);
 
-			const recipient = await this.resolvePerson(sql, orderData.recipient);
-			const recipientPhone = await this.resolvePhone(
-				sql,
-				recipient.id,
-				orderData.recipient.phone,
-			);
-			const recipientAddress = await this.resolveAddress(
-				sql,
-				recipient.id,
-				orderData.recipient.address,
-			);
+			const [buyer, recipient] = await Promise.all([
+				this.resolvePerson(sql, orderData.buyer),
+				this.resolvePerson(sql, orderData.recipient),
+			]);
+
+			const [buyerPhone, buyerAddress, recipientPhone, recipientAddress] =
+				await Promise.all([
+					this.resolvePhone(sql, buyer.id, orderData.buyer.phone),
+					this.resolveAddress(sql, buyer.id, orderData.buyer.address),
+					this.resolvePhone(sql, recipient.id, orderData.recipient.phone),
+					this.resolveAddress(sql, recipient.id, orderData.recipient.address),
+				]);
 
 			const itemIds = orderData.items.map((i) => i.item_id);
 			const items = await this.repo.getItemsByIds(sql, itemIds);
 			const itemMap = new Map(items.map((m) => [m.id, m]));
 
 			let subtotalAmount = 0;
-			const itemsToInsert: OrderItemInsert[] = orderData.items.map(
+			const itemsToInsert: OrderItemValues[] = orderData.items.map(
 				(reqItem) => {
 					const item = itemMap.get(reqItem.item_id);
 					if (!item) {
@@ -159,7 +214,6 @@ export class OrderService {
 					}
 					subtotalAmount += item.price * reqItem.quantity;
 					return {
-						order_id: 0,
 						item_id: item.id,
 						item_name: item.name,
 						item_price: item.price,
