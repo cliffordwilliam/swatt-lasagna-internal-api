@@ -22,6 +22,30 @@ const orderRoutes: FastifyPluginAsync = async (fastify) => {
 			return reply.status(201).send(order);
 		},
 	);
+
+	fastify.put<{ Body: CreateOrderInput; Params: { id: number } }>(
+		"/:id",
+		{
+			schema: {
+				params: {
+					type: "object",
+					properties: {
+						id: { type: "number" },
+					},
+					required: ["id"],
+				},
+				body: CreateOrderSchema,
+				response: { 200: OrderSchema },
+			},
+		},
+		async (request, reply) => {
+			const order = await orderService.putOrder(
+				request.body,
+				request.params.id,
+			);
+			return reply.status(200).send(order);
+		},
+	);
 };
 
 export default orderRoutes;

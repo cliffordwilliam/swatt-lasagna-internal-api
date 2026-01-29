@@ -124,6 +124,26 @@ export class OrderService {
 		}
 	}
 
+	private async validateOrderNumberForUpdate(
+		sql: Sql,
+		orderNumber: string,
+		orderId: number,
+	): Promise<void> {
+		const existingOrder = await this.repo.getOrderNumber(sql, orderNumber);
+		if (existingOrder && existingOrder.id !== orderId) {
+			throw new ConflictError(
+				`Order with number ${orderNumber} already exists`,
+			);
+		}
+	}
+
+	private async validateOrderExists(sql: Sql, orderId: number): Promise<void> {
+		const existingOrder = await this.repo.getOrderById(sql, orderId);
+		if (!existingOrder) {
+			throw new NotFoundError(`Order with id ${orderId} not found`);
+		}
+	}
+
 	private async validateDeliveryMethod(
 		sql: Sql,
 		deliveryMethodId: number,
@@ -166,18 +186,45 @@ export class OrderService {
 		}
 	}
 
+	private async calculateSubtotalAmount(
+		sql: Sql,
+		items: OrderItemInput[],
+	): Promise<{ subtotalAmount: number; itemsToInsert: OrderItemValues[] }> {
+		const itemIds = items.map((i) => i.item_id);
+		const foundItems = await this.repo.getItemsByIds(sql, itemIds);
+		const itemMap = new Map(foundItems.map((m) => [m.id, m]));
+
+		let subtotalAmount = 0;
+		const itemsToInsert: OrderItemValues[] = items.map((reqItem) => {
+			const item = itemMap.get(reqItem.item_id);
+			if (!item) {
+				// Could happen if concurrent deletion happens
+				throw new NotFoundError(`Item with id ${reqItem.item_id} not found`);
+			}
+			subtotalAmount += item.price * reqItem.quantity;
+			return {
+				item_id: item.id,
+				item_name: item.name,
+				item_price: item.price,
+				quantity: reqItem.quantity,
+			};
+		});
+		return { subtotalAmount, itemsToInsert };
+	}
+
+	// Concurrent deletion/update is allowed
+	// Because it is super unlikely during order creation that the following are deleted/updated:
+	// - Item
+	// - Delivery method
+	// - Payment method
+	// - Order status
+	// Because order is made per phone call, unlikely for two phone calls to make the same order
 	async createOrder(orderData: CreateOrderInput): Promise<OrderRow> {
 		this.validateOrderDates(orderData.order_date, orderData.delivery_date);
 		this.validateNoDuplicateItems(orderData.items);
 
-		// Concurrent deletion/update is allowed
-		// Because it is super unlikely during order creation that the following are deleted/updated:
-		// - Item
-		// - Delivery method
-		// - Payment method
-		// - Order status
-		// Because order is made per phone call, unlikely for two phone calls to make the same order
-		return await this.db.begin("read committed", async (sql) => {
+		return await this.db.begin(async (sql) => {
+			await sql`SET TRANSACTION ISOLATION LEVEL READ COMMITTED`;
 			await sql`SET LOCAL statement_timeout = '30s'`;
 
 			await this.validateOrderNumber(sql, orderData.order_number);
@@ -198,29 +245,8 @@ export class OrderService {
 					this.resolveAddress(sql, recipient.id, orderData.recipient.address),
 				]);
 
-			const itemIds = orderData.items.map((i) => i.item_id);
-			const items = await this.repo.getItemsByIds(sql, itemIds);
-			const itemMap = new Map(items.map((m) => [m.id, m]));
-
-			let subtotalAmount = 0;
-			const itemsToInsert: OrderItemValues[] = orderData.items.map(
-				(reqItem) => {
-					const item = itemMap.get(reqItem.item_id);
-					if (!item) {
-						// Could happen if concurrent deletion happens
-						throw new NotFoundError(
-							`Item with id ${reqItem.item_id} not found`,
-						);
-					}
-					subtotalAmount += item.price * reqItem.quantity;
-					return {
-						item_id: item.id,
-						item_name: item.name,
-						item_price: item.price,
-						quantity: reqItem.quantity,
-					};
-				},
-			);
+			const { subtotalAmount, itemsToInsert } =
+				await this.calculateSubtotalAmount(sql, orderData.items);
 
 			const totalAmount = subtotalAmount + orderData.shipping_cost;
 
@@ -244,6 +270,77 @@ export class OrderService {
 			await this.repo.insertOrderItems(sql, finalItems);
 
 			return insertedOrder;
+		});
+	}
+
+	// Same as create but this replaces an existing order instead of making a new one
+	async putOrder(
+		orderData: CreateOrderInput,
+		orderId: number,
+	): Promise<OrderRow> {
+		this.validateOrderDates(orderData.order_date, orderData.delivery_date);
+		this.validateNoDuplicateItems(orderData.items);
+
+		return await this.db.begin(async (sql) => {
+			await sql`SET TRANSACTION ISOLATION LEVEL READ COMMITTED`;
+			await sql`SET LOCAL statement_timeout = '30s'`;
+
+			await this.validateOrderExists(sql, orderId);
+
+			await this.validateOrderNumberForUpdate(
+				sql,
+				orderData.order_number,
+				orderId,
+			);
+			await this.validateDeliveryMethod(sql, orderData.delivery_method_id);
+			await this.validatePaymentMethod(sql, orderData.payment_method_id);
+			await this.validateOrderStatus(sql, orderData.order_status_id);
+
+			const [buyer, recipient] = await Promise.all([
+				this.resolvePerson(sql, orderData.buyer),
+				this.resolvePerson(sql, orderData.recipient),
+			]);
+
+			const [buyerPhone, buyerAddress, recipientPhone, recipientAddress] =
+				await Promise.all([
+					this.resolvePhone(sql, buyer.id, orderData.buyer.phone),
+					this.resolveAddress(sql, buyer.id, orderData.buyer.address),
+					this.resolvePhone(sql, recipient.id, orderData.recipient.phone),
+					this.resolveAddress(sql, recipient.id, orderData.recipient.address),
+				]);
+
+			const { subtotalAmount, itemsToInsert } =
+				await this.calculateSubtotalAmount(sql, orderData.items);
+
+			const totalAmount = subtotalAmount + orderData.shipping_cost;
+
+			const updatedOrder = await this.repo.updateOrder(
+				sql,
+				orderId,
+				orderData,
+				{
+					buyerId: buyer.id,
+					buyerName: buyer.name,
+					buyerPhone: buyerPhone?.phone_number ?? null,
+					buyerAddress: buyerAddress?.address ?? null,
+					recipientId: recipient.id,
+					recipientName: recipient.name,
+					recipientPhone: recipientPhone?.phone_number ?? null,
+					recipientAddress: recipientAddress?.address ?? null,
+					subtotalAmount,
+					totalAmount,
+				},
+			);
+
+			await this.repo.deleteOrderItems(sql, orderId);
+
+			const finalItems: OrderItemInsert[] = itemsToInsert.map((item) => ({
+				...item,
+				order_id: updatedOrder.id,
+			}));
+			await this.repo.insertOrderItems(sql, finalItems);
+
+			return updatedOrder;
 		});
 	}
 }
