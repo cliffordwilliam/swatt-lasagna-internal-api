@@ -1,6 +1,5 @@
 import type { Sql } from "postgres";
 import {
-	AppError,
 	BadRequestError,
 	ConflictError,
 	NotFoundError,
@@ -10,9 +9,9 @@ import { OrderRepository } from "./order-repository.js";
 import type {
 	AddressRow,
 	CreateOrderInput,
-	OrderDetailRow,
 	OrderItemInput,
 	OrderItemInsert,
+	OrderRow,
 	PersonRow,
 	PhoneRow,
 } from "./order-schema.js";
@@ -112,7 +111,7 @@ export class OrderService {
 		}
 	}
 
-	async createOrder(orderData: CreateOrderInput): Promise<OrderDetailRow> {
+	async createOrder(orderData: CreateOrderInput): Promise<OrderRow> {
 		this.validateOrderDates(orderData.order_date, orderData.delivery_date);
 		this.validateNoDuplicateItems(orderData.items);
 
@@ -190,16 +189,7 @@ export class OrderService {
 			}));
 			await this.repo.insertOrderItems(sql, finalItems);
 
-			const orderDetail = await this.repo.getOrderDetailById(
-				sql,
-				insertedOrder.id,
-			);
-			if (!orderDetail) {
-				throw new AppError(
-					`Order with id ${insertedOrder.id} not found after insert`,
-				);
-			}
-			return orderDetail;
+			return insertedOrder;
 		});
 	}
 }

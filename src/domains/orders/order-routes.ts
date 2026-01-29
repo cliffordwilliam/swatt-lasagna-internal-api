@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import {
 	type CreateOrderInput,
 	CreateOrderSchema,
-	OrderDetailSchema,
+	OrderSchema,
 } from "./order-schema.js";
 import { OrderService } from "./order-service.js";
 
@@ -14,7 +14,7 @@ const orderRoutes: FastifyPluginAsync = async (fastify) => {
 		{
 			schema: {
 				body: CreateOrderSchema,
-				response: { 201: OrderDetailSchema },
+				response: { 201: OrderSchema },
 			},
 		},
 		async (request, reply) => {

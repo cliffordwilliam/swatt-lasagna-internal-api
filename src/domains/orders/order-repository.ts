@@ -3,7 +3,6 @@ import type {
 	AddressRow,
 	CreateOrderInput,
 	ItemRow,
-	OrderDetailRow,
 	OrderItemInsert,
 	OrderRow,
 	PersonRow,
@@ -128,21 +127,7 @@ export class OrderRepository {
 				${orderData.delivery_method_id},
 				${orderData.payment_method_id},
 				${orderData.order_status_id}
-			) RETURNING *
-		`;
-		return order!;
-	}
-
-	async insertOrderItems(sql: Sql, items: OrderItemInsert[]): Promise<void> {
-		await sql`INSERT INTO order_items ${sql(items)}`;
-	}
-
-	async getOrderDetailById(
-		sql: Sql,
-		orderId: number,
-	): Promise<OrderDetailRow | undefined> {
-		const [order] = await sql<OrderDetailRow[]>`
-			SELECT
+			) RETURNING
 				id,
 				order_number,
 				order_date,
@@ -162,10 +147,13 @@ export class OrderRepository {
 				subtotal_amount,
 				total_amount,
 				note,
-				created_at
-			FROM orders
-			WHERE id = ${orderId}
+				created_at,
+				updated_at
 		`;
-		return order;
+		return order!;
+	}
+
+	async insertOrderItems(sql: Sql, items: OrderItemInsert[]): Promise<void> {
+		await sql`INSERT INTO order_items ${sql(items)}`;
 	}
 }
