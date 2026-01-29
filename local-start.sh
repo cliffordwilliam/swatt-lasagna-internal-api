@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ ! -f .env ]; then
+    echo ".env file not found, copying .env.example to .env"
+    cp .env.example .env
+fi
+
 cleanup() {
     echo -e "\nCaught signal! Cleaning up..."
     docker compose down -v
