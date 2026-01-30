@@ -80,6 +80,17 @@ export const OrderSchema = Type.Object({
 
 export const OrdersSchema = Type.Array(OrderSchema);
 
+export const OrderWithNamesSchema = Type.Composite([
+	OrderSchema,
+	Type.Object({
+		delivery_method_name: Type.String(),
+		payment_method_name: Type.String(),
+		order_status_name: Type.String(),
+	}),
+]);
+
+export const OrdersWithNamesSchema = Type.Array(OrderWithNamesSchema);
+
 export type Order = Static<typeof OrderSchema>;
 
 export interface OrderRow {
@@ -144,3 +155,9 @@ export type PreparedOrderData = {
 	totalAmount: number;
 	itemsToInsert: OrderItemValues[];
 };
+
+export interface OrderWithNamesRow extends OrderRow {
+	delivery_method_name: string;
+	payment_method_name: string;
+	order_status_name: string;
+}

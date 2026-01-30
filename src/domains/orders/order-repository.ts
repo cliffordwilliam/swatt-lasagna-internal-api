@@ -5,6 +5,7 @@ import type {
 	CreateOrderInput,
 	OrderItemInsert,
 	OrderRow,
+	OrderWithNamesRow,
 	PersonRow,
 	PhoneRow,
 } from "./order-schema.js";
@@ -286,31 +287,37 @@ export class OrderRepository {
 		return status;
 	}
 
-	async getAllOrders(sql: Sql): Promise<OrderRow[]> {
-		return await sql<OrderRow[]>`
+	async getAllOrders(sql: Sql): Promise<OrderWithNamesRow[]> {
+		return await sql<OrderWithNamesRow[]>`
 			SELECT
-				id,
-				order_number,
-				order_date,
-				delivery_date,
-				buyer_id,
-				buyer_name,
-				buyer_phone,
-				buyer_address,
-				recipient_id,
-				recipient_name,
-				recipient_phone,
-				recipient_address,
-				delivery_method_id,
-				payment_method_id,
-				order_status_id,
-				shipping_cost,
-				subtotal_amount,
-				total_amount,
-				note,
-				created_at,
-				updated_at
+				orders.id,
+				orders.order_number,
+				orders.order_date,
+				orders.delivery_date,
+				orders.buyer_id,
+				orders.buyer_name,
+				orders.buyer_phone,
+				orders.buyer_address,
+				orders.recipient_id,
+				orders.recipient_name,
+				orders.recipient_phone,
+				orders.recipient_address,
+				orders.delivery_method_id,
+				delivery_methods.name as delivery_method_name,
+				orders.payment_method_id,
+				payment_methods.name as payment_method_name,
+				orders.order_status_id,
+				order_statuses.name as order_status_name,
+				orders.shipping_cost,
+				orders.subtotal_amount,
+				orders.total_amount,
+				orders.note,
+				orders.created_at,
+				orders.updated_at
 			FROM orders
+			LEFT JOIN delivery_methods ON orders.delivery_method_id = delivery_methods.id
+			LEFT JOIN payment_methods ON orders.payment_method_id = payment_methods.id
+			LEFT JOIN order_statuses ON orders.order_status_id = order_statuses.id
 		`;
 	}
 }
