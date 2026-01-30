@@ -2,6 +2,7 @@
 .husky
 docs
 node_modules
+tests
 .dockerignore
 .env
 .env.example
