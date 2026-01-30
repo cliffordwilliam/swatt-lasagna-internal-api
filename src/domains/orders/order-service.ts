@@ -334,10 +334,22 @@ export class OrderService {
 		await this._validatePaymentMethod(sql, orderData.payment_method_id);
 		await this._validateOrderStatus(sql, orderData.order_status_id);
 
-		const [buyer, recipient] = await Promise.all([
-			this._resolvePerson(sql, orderData.buyer),
-			this._resolvePerson(sql, orderData.recipient),
-		]);
+		let buyer: PersonRow;
+		let recipient: PersonRow;
+
+		if (
+			!("id" in orderData.buyer) &&
+			!("id" in orderData.recipient) &&
+			orderData.buyer.name === orderData.recipient.name
+		) {
+			buyer = await this._resolvePerson(sql, orderData.buyer);
+			recipient = buyer;
+		} else {
+			[buyer, recipient] = await Promise.all([
+				this._resolvePerson(sql, orderData.buyer),
+				this._resolvePerson(sql, orderData.recipient),
+			]);
+		}
 
 		const [buyerPhone, buyerAddress, recipientPhone, recipientAddress] =
 			await Promise.all([
