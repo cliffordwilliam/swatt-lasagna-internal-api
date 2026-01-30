@@ -144,6 +144,13 @@ export class OrderService {
 			return person;
 		}
 		if (personInput.name) {
+			const existingPerson = await this.repo.getPersonByName(
+				sql,
+				personInput.name,
+			);
+			if (existingPerson) {
+				return existingPerson;
+			}
 			return await this.repo.createPerson(sql, personInput.name);
 		}
 		throw new BadRequestError(

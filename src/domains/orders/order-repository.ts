@@ -31,6 +31,16 @@ export class OrderRepository {
 		return phone;
 	}
 
+	async getPersonByName(
+		sql: Sql,
+		name: string,
+	): Promise<PersonRow | undefined> {
+		const [person] = await sql<PersonRow[]>`
+			SELECT id, name FROM persons WHERE name = ${name}
+		`;
+		return person;
+	}
+
 	async createPhone(
 		sql: Sql,
 		personId: number,
