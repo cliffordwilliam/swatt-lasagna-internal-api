@@ -9,39 +9,29 @@ export class ItemService {
 	constructor(private db: Sql) {}
 
 	async createItem(itemData: CreateItemInput): Promise<ItemRow> {
-		return await this.db.begin(async (sql) => {
-			await sql`SET TRANSACTION ISOLATION LEVEL READ COMMITTED`;
-			await sql`SET LOCAL statement_timeout = '30s'`;
+		await this._validateItemNameUniqueness(this.db, itemData.name);
 
-			await this._validateItemNameUniqueness(sql, itemData.name);
+		const insertedItem = await this.repo.createItem(
+			this.db,
+			itemData.name,
+			itemData.price,
+		);
 
-			const insertedItem = await this.repo.createItem(
-				sql,
-				itemData.name,
-				itemData.price,
-			);
-
-			return insertedItem;
-		});
+		return insertedItem;
 	}
 
 	async putItem(itemData: CreateItemInput, itemId: number): Promise<ItemRow> {
-		return await this.db.begin(async (sql) => {
-			await sql`SET TRANSACTION ISOLATION LEVEL READ COMMITTED`;
-			await sql`SET LOCAL statement_timeout = '30s'`;
+		await this._validateItemExists(this.db, itemId);
+		await this._validateItemNameUniqueness(this.db, itemData.name, itemId);
 
-			await this._validateItemExists(sql, itemId);
-			await this._validateItemNameUniqueness(sql, itemData.name, itemId);
+		const updatedItem = await this.repo.updateItem(
+			this.db,
+			itemId,
+			itemData.name,
+			itemData.price,
+		);
 
-			const updatedItem = await this.repo.updateItem(
-				sql,
-				itemId,
-				itemData.name,
-				itemData.price,
-			);
-
-			return updatedItem;
-		});
+		return updatedItem;
 	}
 
 	async getAllItems(): Promise<ItemRow[]> {
