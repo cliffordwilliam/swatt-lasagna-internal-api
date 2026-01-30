@@ -1,8 +1,8 @@
 import type { Sql } from "postgres";
+import type { ItemRow } from "../items/item-schema.js";
 import type {
 	AddressRow,
 	CreateOrderInput,
-	ItemRow,
 	OrderItemInsert,
 	OrderRow,
 	PersonRow,

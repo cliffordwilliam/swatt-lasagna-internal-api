@@ -111,12 +111,6 @@ export interface PersonRow {
 	name: string;
 }
 
-export interface ItemRow {
-	id: number;
-	name: string;
-	price: number;
-}
-
 export interface PhoneRow {
 	id: number;
 	person_id: number;
