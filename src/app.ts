@@ -9,8 +9,8 @@ const app: FastifyPluginAsync = async (fastify) => {
 	await fastify.register(cors, { origin: process.env.CORS_ORIGIN! });
 	errorHandler(fastify);
 	db(fastify);
-	fastify.register(orderRoutes, { prefix: "orders" });
-	fastify.register(itemRoutes, { prefix: "items" });
+	fastify.register(orderRoutes, { prefix: "/api/orders" });
+	fastify.register(itemRoutes, { prefix: "/api/items" });
 };
 
 export default app;

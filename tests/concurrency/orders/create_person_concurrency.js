@@ -33,7 +33,7 @@ const payload = {
 async function createOrder() {
     try {
         console.log(`Sending request for order with buyer phone: ${payload.buyer.phone.value}`);
-        const response = await fetch(`${API_BASE_URL}/orders`, {
+        const response = await fetch(`${API_BASE_URL}/api/orders`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
