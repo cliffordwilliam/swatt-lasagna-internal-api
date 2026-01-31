@@ -1,4 +1,15 @@
 import { type Static, Type } from "@sinclair/typebox";
+import type {
+	AddressRow,
+	PersonRow,
+	PhoneRow,
+} from "../persons/person-schema.js";
+
+export type {
+	AddressRow,
+	PersonRow,
+	PhoneRow,
+} from "../persons/person-schema.js";
 
 export const PhoneInputSchema = Type.Union([
 	Type.Object({
@@ -115,23 +126,6 @@ export interface OrderRow {
 	note: string | null;
 	created_at: Date;
 	updated_at: Date;
-}
-
-export interface PersonRow {
-	id: number;
-	name: string;
-}
-
-export interface PhoneRow {
-	id: number;
-	person_id: number;
-	phone_number: string;
-}
-
-export interface AddressRow {
-	id: number;
-	person_id: number;
-	address: string;
 }
 
 export interface OrderItemInsert {

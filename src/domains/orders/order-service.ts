@@ -5,6 +5,11 @@ import {
 	NotFoundError,
 	UnprocessableEntityError,
 } from "../../lib/errors.js";
+import { DeliveryMethodRepository } from "../delivery-methods/delivery-method-repository.js";
+import { ItemRepository } from "../items/item-repository.js";
+import { OrderStatusRepository } from "../order-statuses/order-status-repository.js";
+import { PaymentMethodRepository } from "../payment-methods/payment-method-repository.js";
+import { PersonRepository } from "../persons/person-repository.js";
 import { OrderRepository } from "./order-repository.js";
 import type {
 	AddressRow,
@@ -20,6 +25,11 @@ import type {
 
 export class OrderService {
 	private repo = new OrderRepository();
+	private itemRepo = new ItemRepository();
+	private personRepo = new PersonRepository();
+	private deliveryMethodRepo = new DeliveryMethodRepository();
+	private paymentMethodRepo = new PaymentMethodRepository();
+	private orderStatusRepo = new OrderStatusRepository();
 
 	constructor(private db: Sql) {}
 
@@ -137,21 +147,21 @@ export class OrderService {
 		personInput: { id?: number; name?: string },
 	): Promise<PersonRow> {
 		if (personInput.id !== undefined) {
-			const person = await this.repo.getPersonById(sql, personInput.id);
+			const person = await this.personRepo.getPersonById(sql, personInput.id);
 			if (!person) {
 				throw new NotFoundError(`Person with id ${personInput.id} not found`);
 			}
 			return person;
 		}
 		if (personInput.name) {
-			const existingPerson = await this.repo.getPersonByName(
+			const existingPerson = await this.personRepo.getPersonByName(
 				sql,
 				personInput.name,
 			);
 			if (existingPerson) {
 				return existingPerson;
 			}
-			return await this.repo.createPerson(sql, personInput.name);
+			return await this.personRepo.createPerson(sql, personInput.name);
 		}
 		throw new BadRequestError(
 			"Either person id or person name must be provided",
@@ -166,7 +176,7 @@ export class OrderService {
 		if (!phoneInput) return null;
 
 		if (phoneInput.id !== undefined) {
-			const phone = await this.repo.getPhoneById(sql, phoneInput.id);
+			const phone = await this.personRepo.getPhoneById(sql, phoneInput.id);
 			if (!phone) {
 				throw new NotFoundError(`Phone with id ${phoneInput.id} not found`);
 			}
@@ -178,7 +188,7 @@ export class OrderService {
 			return phone;
 		}
 		if (phoneInput.value) {
-			return await this.repo.createPhone(sql, personId, phoneInput.value);
+			return await this.personRepo.createPhone(sql, personId, phoneInput.value);
 		}
 		throw new BadRequestError(
 			"Either phone id or phone value must be provided",
@@ -193,7 +203,10 @@ export class OrderService {
 		if (!addressInput) return null;
 
 		if (addressInput.id !== undefined) {
-			const address = await this.repo.getAddressById(sql, addressInput.id);
+			const address = await this.personRepo.getAddressById(
+				sql,
+				addressInput.id,
+			);
 			if (!address) {
 				throw new NotFoundError(`Address with id ${addressInput.id} not found`);
 			}
@@ -205,7 +218,11 @@ export class OrderService {
 			return address;
 		}
 		if (addressInput.value) {
-			return await this.repo.createAddress(sql, personId, addressInput.value);
+			return await this.personRepo.createAddress(
+				sql,
+				personId,
+				addressInput.value,
+			);
 		}
 		throw new BadRequestError(
 			"Either address id or address value must be provided",
@@ -240,7 +257,7 @@ export class OrderService {
 		sql: Sql,
 		deliveryMethodId: number,
 	): Promise<void> {
-		const deliveryMethod = await this.repo.getDeliveryMethodById(
+		const deliveryMethod = await this.deliveryMethodRepo.getDeliveryMethodById(
 			sql,
 			deliveryMethodId,
 		);
@@ -255,7 +272,7 @@ export class OrderService {
 		sql: Sql,
 		paymentMethodId: number,
 	): Promise<void> {
-		const paymentMethod = await this.repo.getPaymentMethodById(
+		const paymentMethod = await this.paymentMethodRepo.getPaymentMethodById(
 			sql,
 			paymentMethodId,
 		);
@@ -270,7 +287,10 @@ export class OrderService {
 		sql: Sql,
 		orderStatusId: number,
 	): Promise<void> {
-		const orderStatus = await this.repo.getOrderStatusById(sql, orderStatusId);
+		const orderStatus = await this.orderStatusRepo.getOrderStatusById(
+			sql,
+			orderStatusId,
+		);
 		if (!orderStatus) {
 			throw new NotFoundError(
 				`Order status with id ${orderStatusId} not found`,
@@ -298,7 +318,7 @@ export class OrderService {
 		items: OrderItemInput[],
 	): Promise<{ subtotalAmount: number; itemsToInsert: OrderItemValues[] }> {
 		const itemIds = items.map((i) => i.item_id);
-		const foundItems = await this.repo.getItemsByIds(sql, itemIds);
+		const foundItems = await this.itemRepo.getItemsByIds(sql, itemIds);
 		const itemMap = new Map(foundItems.map((m) => [m.id, m]));
 
 		let subtotalAmount = 0;

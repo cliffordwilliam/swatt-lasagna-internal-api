@@ -23,6 +23,14 @@ export class ItemRepository {
 		return item;
 	}
 
+	async getItemsByIds(sql: Sql, ids: number[]): Promise<ItemRow[]> {
+		return await sql<ItemRow[]>`
+			SELECT id, name, price, created_at, updated_at
+			FROM items
+			WHERE id IN ${sql(ids)}
+		`;
+	}
+
 	async getItemByName(sql: Sql, name: string): Promise<ItemRow | undefined> {
 		const [item] = await sql<ItemRow[]>`
 			SELECT id, name, price, created_at, updated_at FROM items WHERE name = ${name}
