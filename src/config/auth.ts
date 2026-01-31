@@ -4,9 +4,9 @@ import { UnauthorizedError } from "../lib/errors.js";
 
 export default function auth(fastify: FastifyInstance) {
 	fastify.register(clerkPlugin);
-	fastify.addHook("preHandler", (request, reply) => {
+	fastify.addHook("preHandler", async (request, reply) => {
 		const { userId } = getAuth(request);
-
+		// Must async, so error is caught and response arrives
 		if (!userId) {
 			throw new UnauthorizedError("Authentication required");
 		}
