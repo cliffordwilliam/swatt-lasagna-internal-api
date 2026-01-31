@@ -39,7 +39,7 @@ export const OrderItemInputSchema = Type.Object({
 export type OrderItemInput = Static<typeof OrderItemInputSchema>;
 
 export const CreateOrderSchema = Type.Object({
-	order_number: Type.String({ minLength: 1 }),
+	order_number: Type.String({ minLength: 1, maxLength: 50 }),
 	order_date: Type.String({ format: "date-time" }),
 	delivery_date: Type.String({ format: "date-time" }),
 	buyer: PersonInputSchema,
@@ -47,16 +47,16 @@ export const CreateOrderSchema = Type.Object({
 	delivery_method_id: Type.Integer(),
 	payment_method_id: Type.Integer(),
 	order_status_id: Type.Integer(),
-	shipping_cost: Type.Integer({ minimum: 0, maximum: 1000000 }),
-	note: Type.Optional(Type.String()),
-	items: Type.Array(OrderItemInputSchema, { minItems: 1 }),
+	shipping_cost: Type.Integer({ minimum: 0, maximum: 1000000000 }),
+	note: Type.Optional(Type.String({ maxLength: 500 })),
+	items: Type.Array(OrderItemInputSchema, { minItems: 1, maxItems: 100 }),
 });
 
 export type CreateOrderInput = Static<typeof CreateOrderSchema>;
 
 export const OrderSchema = Type.Object({
 	id: Type.Integer(),
-	order_number: Type.String({ minLength: 1 }),
+	order_number: Type.String({ minLength: 1, maxLength: 50 }),
 	order_date: Type.String({ format: "date-time" }),
 	delivery_date: Type.String({ format: "date-time" }),
 	buyer_id: Type.Integer(),
@@ -70,9 +70,9 @@ export const OrderSchema = Type.Object({
 	delivery_method_id: Type.Integer(),
 	payment_method_id: Type.Integer(),
 	order_status_id: Type.Integer(),
-	shipping_cost: Type.Integer({ minimum: 0, maximum: 1000000 }),
-	subtotal_amount: Type.Integer({ minimum: 0 }),
-	total_amount: Type.Integer({ minimum: 0 }),
+	shipping_cost: Type.Integer({ minimum: 0, maximum: 1000000000 }),
+	subtotal_amount: Type.Integer({ minimum: 0, maximum: 1000000000 }),
+	total_amount: Type.Integer({ minimum: 0, maximum: 1000000000 }),
 	note: Type.Union([Type.String(), Type.Null()]),
 	created_at: Type.String({ format: "date-time" }),
 	updated_at: Type.String({ format: "date-time" }),
