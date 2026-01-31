@@ -10,6 +10,7 @@ tests
 .nvmrc
 compose.yaml
 Dockerfile
+generate-openapi.js
 LICENSE
 local-start.sh
 README.md

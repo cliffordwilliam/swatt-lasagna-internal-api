@@ -10,9 +10,15 @@ import orderRoutes from "./domains/orders/order-routes.js";
 import paymentMethodRoutes from "./domains/payment-methods/payment-method-routes.js";
 import personRoutes from "./domains/persons/person-routes.js";
 
-const app: FastifyPluginAsync = async (fastify) => {
+interface AppOptions {
+	skipDb?: boolean; // For explicit swagger JSON generation
+}
+
+const app: FastifyPluginAsync<AppOptions> = async (fastify, opts) => {
 	errorHandler(fastify);
-	await db(fastify);
+	if (!opts.skipDb) {
+		await db(fastify);
+	}
 	fastify.register(cors, { origin: process.env.CORS_ORIGIN! });
 	auth(fastify);
 	fastify.register(orderRoutes, { prefix: "/api/orders" });
