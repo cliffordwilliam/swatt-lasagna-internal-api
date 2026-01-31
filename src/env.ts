@@ -1,5 +1,5 @@
 function validateEnv() {
-	const required = ["DATABASE_URL"];
+	const required = ["DATABASE_URL", "PORT", "HOST"];
 
 	for (const key of required) {
 		if (!process.env[key]) {
