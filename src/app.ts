@@ -1,5 +1,6 @@
 import cors from "@fastify/cors";
 import type { FastifyPluginAsync } from "fastify";
+import auth from "./config/auth.js";
 import db from "./config/db.js";
 import errorHandler from "./config/error-handler.js";
 import deliveryMethodRoutes from "./domains/delivery-methods/delivery-method-routes.js";
@@ -12,7 +13,8 @@ import personRoutes from "./domains/persons/person-routes.js";
 const app: FastifyPluginAsync = async (fastify) => {
 	await fastify.register(cors, { origin: process.env.CORS_ORIGIN! });
 	errorHandler(fastify);
-	db(fastify);
+	await db(fastify);
+	await auth(fastify);
 	fastify.register(orderRoutes, { prefix: "/api/orders" });
 	fastify.register(itemRoutes, { prefix: "/api/items" });
 	fastify.register(orderStatusRoutes, { prefix: "/api/order-statuses" });
