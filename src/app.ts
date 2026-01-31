@@ -6,7 +6,7 @@ import itemRoutes from "./domains/items/item-routes.js";
 import orderRoutes from "./domains/orders/order-routes.js";
 
 const app: FastifyPluginAsync = async (fastify) => {
-	await fastify.register(cors, { origin: "*" });
+	await fastify.register(cors, { origin: process.env.CORS_ORIGIN! });
 	errorHandler(fastify);
 	db(fastify);
 	fastify.register(orderRoutes, { prefix: "orders" });

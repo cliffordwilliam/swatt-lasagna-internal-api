@@ -8,7 +8,9 @@ declare module "fastify" {
 }
 
 export default function db(fastify: FastifyInstance) {
-	const sql = postgres(process.env.DATABASE_URL!, { max: 10 });
+	const sql = postgres(process.env.DATABASE_URL!, {
+		max: parseInt(process.env.DB_POOL_SIZE!),
+	});
 	fastify.decorate("db", sql);
 	fastify.addHook("onClose", async () => {
 		await sql.end();

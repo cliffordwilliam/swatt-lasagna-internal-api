@@ -21,8 +21,6 @@ services:
       target: production
     environment:
       DATABASE_URL: ${DATABASE_URL}
-      PORT: ${PORT}
-      HOST: ${HOST}
     command: ["node", "migrate.js"]
     depends_on:
       postgres:
@@ -34,8 +32,6 @@ services:
       target: production
     environment:
       DATABASE_URL: ${DATABASE_URL}
-      PORT: ${PORT}
-      HOST: ${HOST}
     command: ["node", "seed.js"]
     depends_on:
       db-migrate:
@@ -51,6 +47,8 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       PORT: ${PORT}
       HOST: ${HOST}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      DB_POOL_SIZE: ${DB_POOL_SIZE}
     depends_on:
       db-seed:
         condition: service_completed_successfully
