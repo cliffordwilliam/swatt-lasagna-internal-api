@@ -11,10 +11,10 @@ import paymentMethodRoutes from "./domains/payment-methods/payment-method-routes
 import personRoutes from "./domains/persons/person-routes.js";
 
 const app: FastifyPluginAsync = async (fastify) => {
-	await fastify.register(cors, { origin: process.env.CORS_ORIGIN! });
-	errorHandler(fastify);
 	await db(fastify);
-	await auth(fastify);
+	fastify.register(cors, { origin: process.env.CORS_ORIGIN! });
+	errorHandler(fastify);
+	auth(fastify);
 	fastify.register(orderRoutes, { prefix: "/api/orders" });
 	fastify.register(itemRoutes, { prefix: "/api/items" });
 	fastify.register(orderStatusRoutes, { prefix: "/api/order-statuses" });
