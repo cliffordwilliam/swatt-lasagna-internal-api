@@ -1,5 +1,5 @@
 import type { Sql } from "postgres";
-import type { ItemRow } from "./item-schema.js";
+import type { ItemRow, ItemSummaryRow } from "./item-schema.js";
 
 export class ItemRepository {
 	async createItem(sql: Sql, name: string, price: number): Promise<ItemRow> {
@@ -10,9 +10,9 @@ export class ItemRepository {
 		return item!;
 	}
 
-	async getAllItems(sql: Sql): Promise<ItemRow[]> {
-		return await sql<ItemRow[]>`
-			SELECT id, name, price, created_at, updated_at FROM items
+	async getAllItems(sql: Sql): Promise<ItemSummaryRow[]> {
+		return await sql<ItemSummaryRow[]>`
+			SELECT id, name, price FROM items
 		`;
 	}
 

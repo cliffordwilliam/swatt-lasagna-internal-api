@@ -1306,9 +1306,7 @@
                     "required": [
                       "id",
                       "name",
-                      "price",
-                      "created_at",
-                      "updated_at"
+                      "price"
                     ],
                     "properties": {
                       "id": {
@@ -1323,14 +1321,6 @@
                         "minimum": 0,
                         "maximum": 1000000,
                         "type": "integer"
-                      },
-                      "created_at": {
-                        "format": "date-time",
-                        "type": "string"
-                      },
-                      "updated_at": {
-                        "format": "date-time",
-                        "type": "string"
                       }
                     }
                   }

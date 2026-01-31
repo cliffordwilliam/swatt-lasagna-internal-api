@@ -15,6 +15,15 @@ export const ItemSchema = Type.Object({
 	updated_at: Type.String({ format: "date-time" }),
 });
 
-export const ItemsSchema = Type.Array(ItemSchema);
-
 export type ItemRow = Static<typeof ItemSchema>;
+
+/** Summary schema for list endpoint - aligns with covering index for index-only scan */
+export const ItemSummarySchema = Type.Object({
+	id: Type.Integer(),
+	name: Type.String({ minLength: 1, maxLength: 255 }),
+	price: Type.Integer({ minimum: 0, maximum: 1000000 }),
+});
+
+export const ItemsSchema = Type.Array(ItemSummarySchema);
+
+export type ItemSummaryRow = Static<typeof ItemSummarySchema>;

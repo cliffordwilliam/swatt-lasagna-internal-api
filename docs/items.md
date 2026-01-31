@@ -26,7 +26,7 @@ Table storing all store items.
 ## Indexes
 
 - PRIMARY KEY on `id`
-- UNIQUE constraint on `name` (implicit index for name lookup)
+- `items_name_unique_idx`: Unique covering index on `(name) INCLUDE (id, price)`—enforces name uniqueness and enables index-only scan on list queries (items rarely updated)
 
 ## Triggers
 

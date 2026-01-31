@@ -1,7 +1,11 @@
 import type { Sql } from "postgres";
 import { ConflictError, NotFoundError } from "../../lib/errors.js";
 import { ItemRepository } from "./item-repository.js";
-import type { CreateItemInput, ItemRow } from "./item-schema.js";
+import type {
+	CreateItemInput,
+	ItemRow,
+	ItemSummaryRow,
+} from "./item-schema.js";
 
 export class ItemService {
 	private repo = new ItemRepository();
@@ -34,7 +38,7 @@ export class ItemService {
 		return updatedItem;
 	}
 
-	async getAllItems(): Promise<ItemRow[]> {
+	async getAllItems(): Promise<ItemSummaryRow[]> {
 		return await this.repo.getAllItems(this.db);
 	}
 
