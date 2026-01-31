@@ -11,7 +11,7 @@ const server = fastify({ logger: true });
 try {
 	await server.register(app);
 
-	closeWithGrace({ delay: 500 }, async ({ err, signal }) => {
+	closeWithGrace(async ({ err, signal }) => {
 		if (err) {
 			server.log.error(err);
 		}
