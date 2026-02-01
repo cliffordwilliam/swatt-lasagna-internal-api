@@ -3,6 +3,7 @@ import {
 	type CreateItemInput,
 	CreateItemSchema,
 	ItemSchema,
+	ItemSummarySchema,
 	ItemsSchema,
 } from "./item-schema.js";
 import { ItemService } from "./item-service.js";
@@ -37,6 +38,26 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
 		},
 	);
 
+	fastify.get<{ Params: { id: number } }>(
+		"/:id",
+		{
+			schema: {
+				params: {
+					type: "object",
+					properties: {
+						id: { type: "number" },
+					},
+					required: ["id"],
+				},
+				response: { 200: ItemSummarySchema },
+			},
+		},
+		async (request, reply) => {
+			const item = await itemService.getItemById(request.params.id);
+			return reply.status(200).send(item);
+		},
+	);
+
 	fastify.put<{ Body: CreateItemInput; Params: { id: number } }>(
 		"/:id",
 		{
@@ -49,12 +70,12 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
 					required: ["id"],
 				},
 				body: CreateItemSchema,
-				response: { 200: ItemSchema },
+				response: { 200: { description: "OK" } },
 			},
 		},
 		async (request, reply) => {
-			const item = await itemService.putItem(request.body, request.params.id);
-			return reply.status(200).send(item);
+			await itemService.putItem(request.body, request.params.id);
+			return reply.status(200).send();
 		},
 	);
 };

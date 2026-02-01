@@ -42,6 +42,14 @@ export class ItemService {
 		return await this.repo.getAllItems(this.db);
 	}
 
+	async getItemById(itemId: number): Promise<ItemSummaryRow> {
+		const item = await this.repo.getItemById(this.db, itemId);
+		if (!item) {
+			throw new NotFoundError(`Item with id ${itemId} not found`);
+		}
+		return { id: item.id, name: item.name, price: item.price };
+	}
+
 	private async _validateItemExists(sql: Sql, itemId: number): Promise<void> {
 		const existingItem = await this.repo.getItemById(sql, itemId);
 		if (!existingItem) {

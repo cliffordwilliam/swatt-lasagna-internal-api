@@ -1241,7 +1241,7 @@
                   },
                   "price": {
                     "minimum": 0,
-                    "maximum": 1000000,
+                    "maximum": 1000000000,
                     "type": "integer"
                   }
                 }
@@ -1275,7 +1275,7 @@
                     },
                     "price": {
                       "minimum": 0,
-                      "maximum": 1000000,
+                      "maximum": 1000000000,
                       "type": "integer"
                     },
                     "created_at": {
@@ -1319,7 +1319,7 @@
                       },
                       "price": {
                         "minimum": 0,
-                        "maximum": 1000000,
+                        "maximum": 1000000000,
                         "type": "integer"
                       }
                     }
@@ -1332,33 +1332,7 @@
       }
     },
     "/api/items/{id}": {
-      "put": {
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": [
-                  "name",
-                  "price"
-                ],
-                "properties": {
-                  "name": {
-                    "minLength": 1,
-                    "maxLength": 255,
-                    "type": "string"
-                  },
-                  "price": {
-                    "minimum": 0,
-                    "maximum": 1000000,
-                    "type": "integer"
-                  }
-                }
-              }
-            }
-          },
-          "required": true
-        },
+      "get": {
         "parameters": [
           {
             "schema": {
@@ -1379,9 +1353,7 @@
                   "required": [
                     "id",
                     "name",
-                    "price",
-                    "created_at",
-                    "updated_at"
+                    "price"
                   ],
                   "properties": {
                     "id": {
@@ -1394,18 +1366,60 @@
                     },
                     "price": {
                       "minimum": 0,
-                      "maximum": 1000000,
+                      "maximum": 1000000000,
                       "type": "integer"
-                    },
-                    "created_at": {
-                      "format": "date-time",
-                      "type": "string"
-                    },
-                    "updated_at": {
-                      "format": "date-time",
-                      "type": "string"
                     }
                   }
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "price"
+                ],
+                "properties": {
+                  "name": {
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "type": "string"
+                  },
+                  "price": {
+                    "minimum": 0,
+                    "maximum": 1000000000,
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "number"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "OK"
                 }
               }
             }

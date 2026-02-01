@@ -45,7 +45,7 @@ export class ItemRepository {
 		price: number,
 	): Promise<ItemRow> {
 		const [item] = await sql<ItemRow[]>`
-			UPDATE items SET name = ${name}, price = ${price}, updated_at = NOW()
+			UPDATE items SET name = ${name}, price = ${price}
 			WHERE id = ${id}
 			RETURNING id, name, price, created_at, updated_at
 		`;

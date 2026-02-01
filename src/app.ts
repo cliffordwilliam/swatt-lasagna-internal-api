@@ -19,7 +19,10 @@ const app: FastifyPluginAsync<AppOptions> = async (fastify, opts) => {
 	if (!opts.skipDb) {
 		await db(fastify);
 	}
-	fastify.register(cors, { origin: process.env.CORS_ORIGIN! });
+	fastify.register(cors, {
+		origin: process.env.CORS_ORIGIN!,
+		methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+	});
 	auth(fastify);
 	fastify.register(orderRoutes, { prefix: "/api/orders" });
 	fastify.register(itemRoutes, { prefix: "/api/items" });
