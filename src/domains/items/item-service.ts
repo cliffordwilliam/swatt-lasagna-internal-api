@@ -1,5 +1,6 @@
 import type { Sql } from "postgres";
 import { ConflictError, NotFoundError } from "../../lib/errors.js";
+import { normalizeNameForDb } from "../../lib/string-utils.js";
 import { ItemRepository } from "./item-repository.js";
 import type {
 	CreateItemInput,
@@ -13,11 +14,12 @@ export class ItemService {
 	constructor(private db: Sql) {}
 
 	async createItem(itemData: CreateItemInput): Promise<ItemRow> {
-		await this._validateItemNameUniqueness(this.db, itemData.name);
+		const normalizedName = normalizeNameForDb(itemData.name);
+		await this._validateItemNameUniqueness(this.db, normalizedName);
 
 		const insertedItem = await this.repo.createItem(
 			this.db,
-			itemData.name,
+			normalizedName,
 			itemData.price,
 		);
 
@@ -26,12 +28,12 @@ export class ItemService {
 
 	async putItem(itemData: CreateItemInput, itemId: number): Promise<ItemRow> {
 		await this._validateItemExists(this.db, itemId);
-		await this._validateItemNameUniqueness(this.db, itemData.name, itemId);
-
+		const normalizedName = normalizeNameForDb(itemData.name);
+		await this._validateItemNameUniqueness(this.db, normalizedName, itemId);
 		const updatedItem = await this.repo.updateItem(
 			this.db,
 			itemId,
-			itemData.name,
+			normalizedName,
 			itemData.price,
 		);
 

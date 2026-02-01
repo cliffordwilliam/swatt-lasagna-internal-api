@@ -46,7 +46,8 @@ INSERT INTO order_statuses (name) VALUES
 
 CREATE TABLE items (
   id SERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
+  name VARCHAR(100) NOT NULL 
+    CHECK (name = LOWER(TRIM(name)) AND name != '' AND name !~ '\s{2,}'),
   price BIGINT NOT NULL CHECK (price >= 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
