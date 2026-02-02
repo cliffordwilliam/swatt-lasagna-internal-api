@@ -155,3 +155,28 @@ export interface OrderWithNamesRow extends OrderRow {
 	payment_method_name: string;
 	order_status_name: string;
 }
+
+/** List view: subset of order fields returned by getAllOrders */
+export const OrderListSchema = Type.Object({
+	id: Type.Integer(),
+	order_number: Type.String({ minLength: 1, maxLength: 50 }),
+	order_date: Type.String({ format: "date-time" }),
+	delivery_date: Type.String({ format: "date-time" }),
+	recipient_name: Type.String({ minLength: 1, maxLength: 255 }),
+	recipient_address: Type.Union([Type.String({ maxLength: 500 }), Type.Null()]),
+	order_status_name: Type.String(),
+	total_amount: Type.Integer({ minimum: 0, maximum: 1000000000 }),
+});
+
+export const OrdersListSchema = Type.Array(OrderListSchema);
+
+export interface OrderListRow {
+	id: number;
+	order_number: string;
+	order_date: Date;
+	delivery_date: Date;
+	recipient_name: string;
+	recipient_address: string | null;
+	order_status_name: string;
+	total_amount: number;
+}

@@ -17,6 +17,7 @@ import type {
 	OrderItemInput,
 	OrderItemInsert,
 	OrderItemValues,
+	OrderListRow,
 	OrderRow,
 	PersonRow,
 	PhoneRow,
@@ -138,7 +139,7 @@ export class OrderService {
 		});
 	}
 
-	async getAllOrders(): Promise<OrderRow[]> {
+	async getAllOrders(): Promise<OrderListRow[]> {
 		return await this.repo.getAllOrders(this.db);
 	}
 

@@ -2,8 +2,8 @@ import type { Sql } from "postgres";
 import type {
 	CreateOrderInput,
 	OrderItemInsert,
+	OrderListRow,
 	OrderRow,
-	OrderWithNamesRow,
 } from "./order-schema.js";
 
 export class OrderRepository {
@@ -181,36 +181,18 @@ export class OrderRepository {
 		return order;
 	}
 
-	async getAllOrders(sql: Sql): Promise<OrderWithNamesRow[]> {
-		return await sql<OrderWithNamesRow[]>`
+	async getAllOrders(sql: Sql): Promise<OrderListRow[]> {
+		return await sql<OrderListRow[]>`
 			SELECT
 				orders.id,
 				orders.order_number,
 				orders.order_date,
 				orders.delivery_date,
-				orders.buyer_id,
-				orders.buyer_name,
-				orders.buyer_phone,
-				orders.buyer_address,
-				orders.recipient_id,
 				orders.recipient_name,
-				orders.recipient_phone,
 				orders.recipient_address,
-				orders.delivery_method_id,
-				delivery_methods.name as delivery_method_name,
-				orders.payment_method_id,
-				payment_methods.name as payment_method_name,
-				orders.order_status_id,
 				order_statuses.name as order_status_name,
-				orders.shipping_cost,
-				orders.subtotal_amount,
-				orders.total_amount,
-				orders.note,
-				orders.created_at,
-				orders.updated_at
+				orders.total_amount
 			FROM orders
-			LEFT JOIN delivery_methods ON orders.delivery_method_id = delivery_methods.id
-			LEFT JOIN payment_methods ON orders.payment_method_id = payment_methods.id
 			LEFT JOIN order_statuses ON orders.order_status_id = order_statuses.id
 		`;
 	}
