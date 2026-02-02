@@ -7,6 +7,8 @@ function validateEnv() {
 		"DB_POOL_SIZE",
 		"CLERK_PUBLISHABLE_KEY",
 		"CLERK_SECRET_KEY",
+		"RATE_LIMIT_MAX",
+		"RATE_LIMIT_TIME_WINDOW",
 	];
 
 	for (const key of required) {
