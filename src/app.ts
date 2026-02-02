@@ -24,6 +24,26 @@ const app: FastifyPluginAsync<AppOptions> = async (fastify, opts) => {
 		methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
 	});
 	auth(fastify);
+
+	fastify.get("/healthz", async (_request, reply) => {
+		return reply.code(200).send({ status: "ok" });
+	});
+
+	fastify.get("/readyz", async (_request, reply) => {
+		if (opts.skipDb) {
+			return reply.code(200).send({ status: "ok", database: "skipped" });
+		}
+		try {
+			await fastify.db`SELECT 1`;
+			return reply.code(200).send({ status: "ok" });
+		} catch {
+			return reply.code(503).send({
+				status: "not ready",
+				reason: "database unavailable",
+			});
+		}
+	});
+
 	fastify.register(orderRoutes, { prefix: "/api/orders" });
 	fastify.register(itemRoutes, { prefix: "/api/items" });
 	fastify.register(orderStatusRoutes, { prefix: "/api/order-statuses" });
