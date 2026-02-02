@@ -33,7 +33,7 @@ export default function errorHandler(fastify: FastifyInstance) {
 			const pgError = error as PostgresError;
 			if (pgError.code?.startsWith("23")) {
 				return reply.status(400).send({
-					message: pgError.detail || error.message,
+					message: "Invalid or duplicate data",
 				});
 			}
 
