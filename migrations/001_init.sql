@@ -1,5 +1,3 @@
-BEGIN;
-
 CREATE TABLE delivery_methods (
   id SERIAL PRIMARY KEY,
   name VARCHAR(100) NOT NULL UNIQUE,
@@ -170,5 +168,3 @@ CREATE TRIGGER update_order_items_updated_at
     BEFORE UPDATE ON order_items
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
-
-COMMIT;

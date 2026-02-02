@@ -1,17 +1,17 @@
-import postgres from 'postgres';
+import postgres from "postgres";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
-  console.error('DATABASE_URL is not set');
-  process.exit(1);
+	console.error("DATABASE_URL is not set");
+	process.exit(1);
 }
 
 const sql = postgres(DATABASE_URL, { max: 1 });
 
 async function seed() {
-  console.log('Seeding database...');
+	console.log("Seeding database...");
 
-  await sql`
+	await sql`
     INSERT INTO items (name, price) VALUES
       ('lasagna mini', 65000),
       ('lasagna small', 95000),
@@ -72,14 +72,14 @@ async function seed() {
       ('hampers marmer cake', 350000);
   `;
 
-  console.log('Seed completed');
+	console.log("Seed completed");
 }
 
 try {
-  await seed();
+	await seed();
 } catch (err) {
-  console.error('Seed failed:', err);
-  process.exit(1);
+	console.error("Seed failed:", err);
+	process.exit(1);
 } finally {
-  await sql.end();
+	await sql.end();
 }
