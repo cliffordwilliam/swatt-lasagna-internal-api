@@ -2,12 +2,10 @@ import type { Sql } from "postgres";
 import type { ItemRow, ItemSummaryRow } from "./item-schema.js";
 
 export class ItemRepository {
-	async createItem(sql: Sql, name: string, price: number): Promise<ItemRow> {
-		const [item] = await sql<ItemRow[]>`
+	async createItem(sql: Sql, name: string, price: number): Promise<void> {
+		await sql`
 			INSERT INTO items (name, price) VALUES (${name}, ${price})
-			RETURNING id, name, price, created_at, updated_at
 		`;
-		return item!;
 	}
 
 	async getAllItems(sql: Sql): Promise<ItemSummaryRow[]> {
@@ -43,12 +41,10 @@ export class ItemRepository {
 		id: number,
 		name: string,
 		price: number,
-	): Promise<ItemRow> {
-		const [item] = await sql<ItemRow[]>`
+	): Promise<void> {
+		await sql`
 			UPDATE items SET name = ${name}, price = ${price}
 			WHERE id = ${id}
-			RETURNING id, name, price, created_at, updated_at
 		`;
-		return item!;
 	}
 }

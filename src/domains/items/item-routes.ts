@@ -2,7 +2,6 @@ import type { FastifyPluginAsync } from "fastify";
 import {
 	type CreateItemInput,
 	CreateItemSchema,
-	ItemSchema,
 	ItemSummarySchema,
 	ItemsSchema,
 } from "./item-schema.js";
@@ -16,12 +15,12 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
 		{
 			schema: {
 				body: CreateItemSchema,
-				response: { 201: ItemSchema },
+				response: { 201: { description: "OK" } },
 			},
 		},
 		async (request, reply) => {
-			const item = await itemService.createItem(request.body);
-			return reply.status(201).send(item);
+			await itemService.createItem(request.body);
+			return reply.status(201).send();
 		},
 	);
 

@@ -2,42 +2,25 @@ import type { Sql } from "postgres";
 import { ConflictError, NotFoundError } from "../../lib/errors.js";
 import { normalizeNameForDb } from "../../lib/string-utils.js";
 import { ItemRepository } from "./item-repository.js";
-import type {
-	CreateItemInput,
-	ItemRow,
-	ItemSummaryRow,
-} from "./item-schema.js";
+import type { CreateItemInput, ItemSummaryRow } from "./item-schema.js";
 
 export class ItemService {
 	private repo = new ItemRepository();
 
 	constructor(private db: Sql) {}
 
-	async createItem(itemData: CreateItemInput): Promise<ItemRow> {
+	async createItem(itemData: CreateItemInput): Promise<void> {
 		const normalizedName = normalizeNameForDb(itemData.name);
 		await this._validateItemNameUniqueness(this.db, normalizedName);
 
-		const insertedItem = await this.repo.createItem(
-			this.db,
-			normalizedName,
-			itemData.price,
-		);
-
-		return insertedItem;
+		await this.repo.createItem(this.db, normalizedName, itemData.price);
 	}
 
-	async putItem(itemData: CreateItemInput, itemId: number): Promise<ItemRow> {
+	async putItem(itemData: CreateItemInput, itemId: number): Promise<void> {
 		await this._validateItemExists(this.db, itemId);
 		const normalizedName = normalizeNameForDb(itemData.name);
 		await this._validateItemNameUniqueness(this.db, normalizedName, itemId);
-		const updatedItem = await this.repo.updateItem(
-			this.db,
-			itemId,
-			normalizedName,
-			itemData.price,
-		);
-
-		return updatedItem;
+		await this.repo.updateItem(this.db, itemId, normalizedName, itemData.price);
 	}
 
 	async getAllItems(): Promise<ItemSummaryRow[]> {
