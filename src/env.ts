@@ -9,6 +9,7 @@ function validateEnv() {
 		"CLERK_SECRET_KEY",
 		"RATE_LIMIT_MAX",
 		"RATE_LIMIT_TIME_WINDOW",
+		"NODE_ENV",
 	];
 
 	for (const key of required) {

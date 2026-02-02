@@ -6,7 +6,17 @@ import closeWithGrace from "close-with-grace";
 import fastify from "fastify";
 import app from "./app.js";
 
-const server = fastify({ logger: true });
+const server = fastify({
+	logger: {
+		level: process.env.NODE_ENV === "production" ? "info" : "debug",
+		serializers: {
+			req: (req) => ({
+				method: req.method,
+				url: req.url,
+			}),
+		},
+	},
+});
 
 try {
 	await server.register(app);
