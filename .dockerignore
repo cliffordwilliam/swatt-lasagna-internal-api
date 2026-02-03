@@ -4,7 +4,6 @@ dist
 docs
 node_modules
 tests
-tools
 .dockerignore
 .env
 .env.example
@@ -12,6 +11,8 @@ tools
 .nvmrc
 compose.yaml
 Dockerfile
+generate-openapi.js
 LICENSE
 local-start.sh
+openapi.json
 README.md
