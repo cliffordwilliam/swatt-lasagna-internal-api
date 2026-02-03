@@ -8,8 +8,8 @@ import app from "./dist/app.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function generateSpec() {
-	const server = fastify({ logger: false });
-	await server.register(swagger, { openapi: {} });
+	const server = fastify();
+	await server.register(swagger);
 	await server.register(app, { skipDb: true });
 	await server.ready();
 	const spec = server.swagger();
