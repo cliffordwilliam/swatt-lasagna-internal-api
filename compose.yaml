@@ -15,14 +15,27 @@ services:
     ports:
       - "8080:8080"
 
-  swagger-ui:
-    image: swaggerapi/swagger-ui:latest
+  redoc:
+    image: nginx:alpine
     ports:
-      - "8081:8080"
+      - "8081:80"
     volumes:
-      - ./openapi.json:/openapi.json
-    environment:
-      SWAGGER_JSON: /openapi.json
+      - ./openapi.json:/usr/share/nginx/html/openapi.json
+    command: >
+      sh -c "
+      echo '<!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset=\"utf-8\"/>
+          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
+        </head>
+        <body>
+          <redoc spec-url=\"/openapi.json\"></redoc>
+          <script src=\"https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js\"> </script>
+        </body>
+      </html>' > /usr/share/nginx/html/index.html &&
+      nginx -g 'daemon off;'
+      "
 
   db-migrate:
     build:
