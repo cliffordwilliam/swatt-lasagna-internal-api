@@ -16,7 +16,7 @@ export default async function db(fastify: FastifyInstance) {
 		fastify.log.info("Database connection established");
 	} catch (error) {
 		await sql.end();
-		throw error;
+		throw error; // For index catch block
 	}
 	fastify.decorate("db", sql);
 	fastify.addHook("onClose", async () => {
