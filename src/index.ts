@@ -12,7 +12,7 @@ const server = fastify({
 		serializers: {
 			req: (req) => ({
 				method: req.method,
-				url: req.url,
+				url: req.url?.split("?")[0],
 			}),
 		},
 	},
