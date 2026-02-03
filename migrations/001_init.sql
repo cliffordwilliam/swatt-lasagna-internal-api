@@ -60,8 +60,6 @@ CREATE TABLE persons (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_persons_name ON persons(name);
-
 CREATE TABLE person_phones (
   id SERIAL PRIMARY KEY,
   person_id INTEGER NOT NULL REFERENCES persons(id),

@@ -19,12 +19,11 @@ Table storing all customers.
 - **TIMESTAMPTZ**: Stores UTC and returns local time
 - **updated_at trigger**: Automatically updates on row modification
 - **No delete strategy**: For now, no hard or soft delete is planned
-- **Name index**: Index created for name lookup performance
 
 ## Indexes
 
 - PRIMARY KEY on `id`
-- `idx_persons_name` on `name` (for name lookup)
+- UNIQUE constraint on `name` (automatically creates a unique index)
 
 ## Triggers
 
