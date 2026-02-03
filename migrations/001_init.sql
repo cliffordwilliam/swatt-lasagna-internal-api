@@ -55,10 +55,14 @@ CREATE UNIQUE INDEX items_name_unique_idx ON items (name) INCLUDE (id, price);
 
 CREATE TABLE persons (
   id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL UNIQUE
+    CHECK (name = LOWER(TRIM(name)) AND name != '' AND name !~ '\s{2,}'),
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX persons_name_search_idx ON persons USING gin (name gin_trgm_ops);
 
 CREATE TABLE person_phones (
   id SERIAL PRIMARY KEY,

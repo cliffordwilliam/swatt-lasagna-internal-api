@@ -26,6 +26,12 @@ export class PersonRepository {
 		return person;
 	}
 
+	async searchPersonsByName(sql: Sql, name: string): Promise<PersonRow[]> {
+		return await sql<PersonRow[]>`
+			SELECT id, name FROM persons WHERE name ILIKE ${`%${name}%`} LIMIT 50
+		`;
+	}
+
 	async getPhoneById(sql: Sql, id: number): Promise<PhoneRow | undefined> {
 		const [phone] = await sql<PhoneRow[]>`
 			SELECT id, person_id, phone_number FROM person_phones WHERE id = ${id}
