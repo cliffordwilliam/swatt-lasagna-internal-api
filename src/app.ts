@@ -13,14 +13,14 @@ import paymentMethodRoutes from "./domains/payment-methods/payment-method-routes
 import personRoutes from "./domains/persons/person-routes.js";
 
 interface AppOptions {
-	skipDb?: boolean; // For explicit swagger JSON generation
+	skipDb?: boolean; // For OpenAPI JSON generation
 }
 
 const app: FastifyPluginAsync<AppOptions> = async (fastify, opts) => {
-	errorHandler(fastify);
 	if (!opts.skipDb) {
 		await db(fastify);
 	}
+	errorHandler(fastify);
 	fastify.register(cors, {
 		origin: process.env.CORS_ORIGIN!,
 		methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
