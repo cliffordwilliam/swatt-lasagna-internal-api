@@ -26,6 +26,7 @@ Table storing all customer phone numbers.
 
 - PRIMARY KEY on `id`
 - UNIQUE constraint on `(person_id, phone_number)`
+- `person_phones_phone_number_search_idx`: GIN index on `phone_number` using `gin_trgm_ops` for efficient ILIKE search queries
 
 ## Foreign Keys
 

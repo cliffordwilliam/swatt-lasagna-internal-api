@@ -1,27 +1,17 @@
 import { type Static, Type } from "@sinclair/typebox";
 
+export const CreatePersonSchema = Type.Object({
+	name: Type.String({ minLength: 1, maxLength: 255 }),
+});
+
+export type CreatePersonInput = Static<typeof CreatePersonSchema>;
+
 export const PersonSchema = Type.Object({
 	id: Type.Integer(),
 	name: Type.String(),
 });
 
-export const PhoneSchema = Type.Object({
-	id: Type.Integer(),
-	person_id: Type.Integer(),
-	phone_number: Type.String(),
-});
-
-export const AddressSchema = Type.Object({
-	id: Type.Integer(),
-	person_id: Type.Integer(),
-	address: Type.String(),
-});
-
-export const GetPersonByNameQuerySchema = Type.Object({
-	name: Type.String({ minLength: 1 }),
-});
-
-export const SearchPersonsByNameQuerySchema = Type.Object({
+export const GetPersonQuerySchema = Type.Object({
 	name: Type.String({ minLength: 1 }),
 });
 
@@ -30,12 +20,3 @@ export const SearchPersonsByNameResponseSchema = Type.Array(PersonSchema, {
 });
 
 export type PersonRow = Static<typeof PersonSchema>;
-export type PhoneRow = Static<typeof PhoneSchema>;
-export type AddressRow = Static<typeof AddressSchema>;
-export type GetPersonByNameQuery = Static<typeof GetPersonByNameQuerySchema>;
-export type SearchPersonsByNameQuery = Static<
-	typeof SearchPersonsByNameQuerySchema
->;
-export type SearchPersonsByNameResponse = Static<
-	typeof SearchPersonsByNameResponseSchema
->;

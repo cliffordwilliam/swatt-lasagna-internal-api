@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
 import {
-	GetPersonByNameQuerySchema,
-	PersonSchema,
-	SearchPersonsByNameQuerySchema,
+	type CreatePersonInput,
+	CreatePersonSchema,
+	GetPersonQuerySchema,
 	SearchPersonsByNameResponseSchema,
 } from "./person-schema.js";
 import { PersonService } from "./person-service.js";
@@ -10,17 +10,17 @@ import { PersonService } from "./person-service.js";
 const personRoutes: FastifyPluginAsync = async (fastify) => {
 	const personService = new PersonService(fastify.db);
 
-	fastify.get<{ Querystring: { name: string } }>(
+	fastify.post<{ Body: CreatePersonInput }>(
 		"/",
 		{
 			schema: {
-				querystring: GetPersonByNameQuerySchema,
-				response: { 200: PersonSchema },
+				body: CreatePersonSchema,
+				response: { 201: { description: "OK" } },
 			},
 		},
 		async (request, reply) => {
-			const person = await personService.getPersonByName(request.query.name);
-			return reply.status(200).send(person);
+			await personService.createPerson(request.body);
+			return reply.status(201).send();
 		},
 	);
 
@@ -28,7 +28,7 @@ const personRoutes: FastifyPluginAsync = async (fastify) => {
 		"/search",
 		{
 			schema: {
-				querystring: SearchPersonsByNameQuerySchema,
+				querystring: GetPersonQuerySchema,
 				response: { 200: SearchPersonsByNameResponseSchema },
 			},
 		},

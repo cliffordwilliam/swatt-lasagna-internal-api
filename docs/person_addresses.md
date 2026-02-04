@@ -26,6 +26,7 @@ Table storing all customer addresses.
 
 - PRIMARY KEY on `id`
 - UNIQUE constraint on `(person_id, address)`
+- `person_addresses_address_search_idx`: GIN index on `address` using `gin_trgm_ops` for efficient ILIKE search queries
 
 ## Foreign Keys
 

@@ -7,16 +7,6 @@ export const CreateItemSchema = Type.Object({
 
 export type CreateItemInput = Static<typeof CreateItemSchema>;
 
-export const ItemSchema = Type.Object({
-	id: Type.Integer(),
-	name: Type.String({ minLength: 1, maxLength: 100 }),
-	price: Type.Integer({ minimum: 0, maximum: 1000000000 }),
-	created_at: Type.String({ format: "date-time" }),
-	updated_at: Type.String({ format: "date-time" }),
-});
-
-export type ItemRow = Static<typeof ItemSchema>;
-
 export const ItemSummarySchema = Type.Object({
 	id: Type.Integer(),
 	name: Type.String({ minLength: 1, maxLength: 100 }),

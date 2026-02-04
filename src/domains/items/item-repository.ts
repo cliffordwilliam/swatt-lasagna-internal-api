@@ -1,5 +1,5 @@
 import type { Sql } from "postgres";
-import type { ItemRow, ItemSummaryRow } from "./item-schema.js";
+import type { ItemSummaryRow } from "./item-schema.js";
 
 export class ItemRepository {
 	async createItem(sql: Sql, name: string, price: number): Promise<void> {
@@ -14,26 +14,19 @@ export class ItemRepository {
 		`;
 	}
 
-	async getItemById(sql: Sql, id: number): Promise<ItemRow | undefined> {
-		const [item] = await sql<ItemRow[]>`
-			SELECT id, name, price, created_at, updated_at FROM items WHERE id = ${id}
+	async getItemById(sql: Sql, id: number): Promise<ItemSummaryRow | undefined> {
+		const [item] = await sql<ItemSummaryRow[]>`
+			SELECT id, name, price FROM items WHERE id = ${id}
 		`;
 		return item;
 	}
 
-	async getItemsByIds(sql: Sql, ids: number[]): Promise<ItemRow[]> {
-		return await sql<ItemRow[]>`
-			SELECT id, name, price, created_at, updated_at
+	async getItemsByIds(sql: Sql, ids: number[]): Promise<ItemSummaryRow[]> {
+		return await sql<ItemSummaryRow[]>`
+			SELECT id, name, price
 			FROM items
 			WHERE id IN ${sql(ids)}
 		`;
-	}
-
-	async getItemByName(sql: Sql, name: string): Promise<ItemRow | undefined> {
-		const [item] = await sql<ItemRow[]>`
-			SELECT id, name, price, created_at, updated_at FROM items WHERE name = ${name}
-		`;
-		return item;
 	}
 
 	async updateItem(
@@ -46,5 +39,32 @@ export class ItemRepository {
 			UPDATE items SET name = ${name}, price = ${price}
 			WHERE id = ${id}
 		`;
+	}
+
+	async itemExists(sql: Sql, id: number): Promise<boolean> {
+		const [result] = await sql<[{ exists: boolean }]>`
+			SELECT EXISTS(SELECT 1 FROM items WHERE id = ${id}) as exists
+		`;
+		return result.exists;
+	}
+
+	async itemNameExists(
+		sql: Sql,
+		name: string,
+		excludeItemId?: number,
+	): Promise<boolean> {
+		if (excludeItemId !== undefined) {
+			const [result] = await sql<[{ exists: boolean }]>`
+				SELECT EXISTS(
+					SELECT 1 FROM items
+					WHERE name = ${name} AND id != ${excludeItemId}
+				) as exists
+			`;
+			return result.exists;
+		}
+		const [result] = await sql<[{ exists: boolean }]>`
+			SELECT EXISTS(SELECT 1 FROM items WHERE name = ${name}) as exists
+		`;
+		return result.exists;
 	}
 }

@@ -5,12 +5,14 @@ import type { FastifyPluginAsync } from "fastify";
 import { requireAuth } from "./config/auth.js";
 import db from "./config/db.js";
 import errorHandler from "./config/error-handler.js";
+import addressRoutes from "./domains/addresses/address-routes.js";
 import deliveryMethodRoutes from "./domains/delivery-methods/delivery-method-routes.js";
 import itemRoutes from "./domains/items/item-routes.js";
 import orderStatusRoutes from "./domains/order-statuses/order-status-routes.js";
 import orderRoutes from "./domains/orders/order-routes.js";
 import paymentMethodRoutes from "./domains/payment-methods/payment-method-routes.js";
 import personRoutes from "./domains/persons/person-routes.js";
+import phoneRoutes from "./domains/phones/phone-routes.js";
 
 interface AppOptions {
 	skipDb?: boolean; // For OpenAPI JSON generation
@@ -62,6 +64,8 @@ const app: FastifyPluginAsync<AppOptions> = async (fastify, opts) => {
 			instance.register(paymentMethodRoutes, { prefix: "/payment-methods" });
 			instance.register(deliveryMethodRoutes, { prefix: "/delivery-methods" });
 			instance.register(personRoutes, { prefix: "/persons" });
+			instance.register(phoneRoutes, { prefix: "/phones" });
+			instance.register(addressRoutes, { prefix: "/addresses" });
 		},
 		{ prefix: "/api" },
 	);

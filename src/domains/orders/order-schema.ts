@@ -1,46 +1,21 @@
 import { type Static, Type } from "@sinclair/typebox";
-import type {
-	AddressRow,
-	PersonRow,
-	PhoneRow,
-} from "../persons/person-schema.js";
+import type { AddressSummaryRow as AddressRow } from "../addresses/address-schema.js";
+import type { PersonRow } from "../persons/person-schema.js";
+import type { PhoneSummaryRow as PhoneRow } from "../phones/phone-schema.js";
 
-export type {
-	AddressRow,
-	PersonRow,
-	PhoneRow,
-} from "../persons/person-schema.js";
+export const PhoneInputSchema = Type.Object({
+	id: Type.Integer(),
+});
 
-export const PhoneInputSchema = Type.Union([
-	Type.Object({
-		id: Type.Integer(),
-	}),
-	Type.Object({
-		value: Type.String({ minLength: 1, maxLength: 25 }),
-	}),
-]);
+export const AddressInputSchema = Type.Object({
+	id: Type.Integer(),
+});
 
-export const AddressInputSchema = Type.Union([
-	Type.Object({
-		id: Type.Integer(),
-	}),
-	Type.Object({
-		value: Type.String({ minLength: 1, maxLength: 500 }),
-	}),
-]);
-
-export const PersonInputSchema = Type.Union([
-	Type.Object({
-		id: Type.Integer(),
-		phone: Type.Optional(PhoneInputSchema),
-		address: Type.Optional(AddressInputSchema),
-	}),
-	Type.Object({
-		name: Type.String({ minLength: 1, maxLength: 255 }),
-		phone: Type.Optional(PhoneInputSchema),
-		address: Type.Optional(AddressInputSchema),
-	}),
-]);
+export const PersonInputSchema = Type.Object({
+	id: Type.Integer(),
+	phone: PhoneInputSchema,
+	address: AddressInputSchema,
+});
 
 export const OrderItemInputSchema = Type.Object({
 	item_id: Type.Integer(),
@@ -89,21 +64,6 @@ export const OrderSchema = Type.Object({
 	updated_at: Type.String({ format: "date-time" }),
 });
 
-export const OrdersSchema = Type.Array(OrderSchema);
-
-export const OrderWithNamesSchema = Type.Composite([
-	OrderSchema,
-	Type.Object({
-		delivery_method_name: Type.String(),
-		payment_method_name: Type.String(),
-		order_status_name: Type.String(),
-	}),
-]);
-
-export const OrdersWithNamesSchema = Type.Array(OrderWithNamesSchema);
-
-export type Order = Static<typeof OrderSchema>;
-
 export interface OrderRow {
 	id: number;
 	order_number: string;
@@ -141,20 +101,14 @@ export type OrderItemValues = Omit<OrderItemInsert, "order_id">;
 export type PreparedOrderData = {
 	buyer: PersonRow;
 	recipient: PersonRow;
-	buyerPhone: PhoneRow | null;
-	buyerAddress: AddressRow | null;
-	recipientPhone: PhoneRow | null;
-	recipientAddress: AddressRow | null;
+	buyerPhone: PhoneRow;
+	buyerAddress: AddressRow;
+	recipientPhone: PhoneRow;
+	recipientAddress: AddressRow;
 	subtotalAmount: number;
 	totalAmount: number;
 	itemsToInsert: OrderItemValues[];
 };
-
-export interface OrderWithNamesRow extends OrderRow {
-	delivery_method_name: string;
-	payment_method_name: string;
-	order_status_name: string;
-}
 
 /** List view: subset of order fields returned by getAllOrders */
 export const OrderListSchema = Type.Object({

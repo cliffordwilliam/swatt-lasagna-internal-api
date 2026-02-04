@@ -5,22 +5,24 @@ import {
 	NotFoundError,
 	UnprocessableEntityError,
 } from "../../lib/errors.js";
+import { AddressRepository } from "../addresses/address-repository.js";
+import type { AddressSummaryRow as AddressRow } from "../addresses/address-schema.js";
 import { DeliveryMethodRepository } from "../delivery-methods/delivery-method-repository.js";
 import { ItemRepository } from "../items/item-repository.js";
 import { OrderStatusRepository } from "../order-statuses/order-status-repository.js";
 import { PaymentMethodRepository } from "../payment-methods/payment-method-repository.js";
 import { PersonRepository } from "../persons/person-repository.js";
+import type { PersonRow } from "../persons/person-schema.js";
+import { PhoneRepository } from "../phones/phone-repository.js";
+import type { PhoneSummaryRow as PhoneRow } from "../phones/phone-schema.js";
 import { OrderRepository } from "./order-repository.js";
 import type {
-	AddressRow,
 	CreateOrderInput,
 	OrderItemInput,
 	OrderItemInsert,
 	OrderItemValues,
 	OrderListRow,
 	OrderRow,
-	PersonRow,
-	PhoneRow,
 	PreparedOrderData,
 } from "./order-schema.js";
 
@@ -28,6 +30,8 @@ export class OrderService {
 	private repo = new OrderRepository();
 	private itemRepo = new ItemRepository();
 	private personRepo = new PersonRepository();
+	private phoneRepo = new PhoneRepository();
+	private addressRepo = new AddressRepository();
 	private deliveryMethodRepo = new DeliveryMethodRepository();
 	private paymentMethodRepo = new PaymentMethodRepository();
 	private orderStatusRepo = new OrderStatusRepository();
@@ -59,12 +63,12 @@ export class OrderService {
 			const insertedOrder = await this.repo.insertOrder(sql, orderData, {
 				buyerId: buyer.id,
 				buyerName: buyer.name,
-				buyerPhone: buyerPhone?.phone_number ?? null,
-				buyerAddress: buyerAddress?.address ?? null,
+				buyerPhone: buyerPhone.phone_number,
+				buyerAddress: buyerAddress.address,
 				recipientId: recipient.id,
 				recipientName: recipient.name,
-				recipientPhone: recipientPhone?.phone_number ?? null,
-				recipientAddress: recipientAddress?.address ?? null,
+				recipientPhone: recipientPhone.phone_number,
+				recipientAddress: recipientAddress.address,
 				subtotalAmount,
 				totalAmount,
 			});
@@ -116,12 +120,12 @@ export class OrderService {
 				{
 					buyerId: buyer.id,
 					buyerName: buyer.name,
-					buyerPhone: buyerPhone?.phone_number ?? null,
-					buyerAddress: buyerAddress?.address ?? null,
+					buyerPhone: buyerPhone.phone_number,
+					buyerAddress: buyerAddress.address,
 					recipientId: recipient.id,
 					recipientName: recipient.name,
-					recipientPhone: recipientPhone?.phone_number ?? null,
-					recipientAddress: recipientAddress?.address ?? null,
+					recipientPhone: recipientPhone.phone_number,
+					recipientAddress: recipientAddress.address,
 					subtotalAmount,
 					totalAmount,
 				},
@@ -143,91 +147,49 @@ export class OrderService {
 		return await this.repo.getAllOrders(this.db);
 	}
 
-	private async _resolvePerson(
+	private async _getPerson(
 		sql: Sql,
-		personInput: { id?: number; name?: string },
+		personInput: { id: number },
 	): Promise<PersonRow> {
-		if (personInput.id !== undefined) {
-			const person = await this.personRepo.getPersonById(sql, personInput.id);
-			if (!person) {
-				throw new NotFoundError(`Person with id ${personInput.id} not found`);
-			}
-			return person;
+		const person = await this.personRepo.getPersonById(sql, personInput.id);
+		if (!person) {
+			throw new NotFoundError(`Person with id ${personInput.id} not found`);
 		}
-		if (personInput.name) {
-			const existingPerson = await this.personRepo.getPersonByName(
-				sql,
-				personInput.name,
-			);
-			if (existingPerson) {
-				return existingPerson;
-			}
-			return await this.personRepo.createPerson(sql, personInput.name);
-		}
-		throw new BadRequestError(
-			"Either person id or person name must be provided",
-		);
+		return person;
 	}
 
-	private async _resolvePhone(
+	private async _getPhone(
 		sql: Sql,
 		personId: number,
-		phoneInput: { id?: number; value?: string } | undefined,
-	): Promise<PhoneRow | null> {
-		if (!phoneInput) return null;
-
-		if (phoneInput.id !== undefined) {
-			const phone = await this.personRepo.getPhoneById(sql, phoneInput.id);
-			if (!phone) {
-				throw new NotFoundError(`Phone with id ${phoneInput.id} not found`);
-			}
-			if (phone.person_id !== personId) {
-				throw new ConflictError(
-					`Phone with id ${phoneInput.id} does not belong to person ${personId}`,
-				);
-			}
-			return phone;
+		phoneInput: { id: number },
+	): Promise<PhoneRow> {
+		const phone = await this.phoneRepo.getPhoneById(sql, phoneInput.id);
+		if (!phone) {
+			throw new NotFoundError(`Phone with id ${phoneInput.id} not found`);
 		}
-		if (phoneInput.value) {
-			return await this.personRepo.createPhone(sql, personId, phoneInput.value);
+		if (phone.person_id !== personId) {
+			throw new ConflictError(
+				`Phone with id ${phoneInput.id} does not belong to person ${personId}`,
+			);
 		}
-		throw new BadRequestError(
-			"Either phone id or phone value must be provided",
-		);
+		return phone;
 	}
 
-	private async _resolveAddress(
+	private async _getAddress(
 		sql: Sql,
 		personId: number,
-		addressInput: { id?: number; value?: string } | undefined,
-	): Promise<AddressRow | null> {
-		if (!addressInput) return null;
-
-		if (addressInput.id !== undefined) {
-			const address = await this.personRepo.getAddressById(
-				sql,
-				addressInput.id,
-			);
-			if (!address) {
-				throw new NotFoundError(`Address with id ${addressInput.id} not found`);
-			}
-			if (address.person_id !== personId) {
-				throw new ConflictError(
-					`Address with id ${addressInput.id} does not belong to person ${personId}`,
-				);
-			}
-			return address;
+		addressInput: { id: number },
+	): Promise<AddressRow> {
+		const address = await this.addressRepo.getAddressById(sql, addressInput.id);
+		if (!address) {
+			throw new NotFoundError(`Address with id ${addressInput.id} not found`);
 		}
-		if (addressInput.value) {
-			return await this.personRepo.createAddress(
-				sql,
-				personId,
-				addressInput.value,
+		if (address.person_id !== personId) {
+			throw new ConflictError(
+				`Address with id ${addressInput.id} does not belong to person ${personId}`,
 			);
 		}
-		throw new BadRequestError(
-			"Either address id or address value must be provided",
-		);
+		return address;
 	}
 
 	private _validateOrderDates(orderDate: string, deliveryDate: string): void {
@@ -355,29 +317,17 @@ export class OrderService {
 		await this._validatePaymentMethod(sql, orderData.payment_method_id);
 		await this._validateOrderStatus(sql, orderData.order_status_id);
 
-		let buyer: PersonRow;
-		let recipient: PersonRow;
-
-		if (
-			!("id" in orderData.buyer) &&
-			!("id" in orderData.recipient) &&
-			orderData.buyer.name === orderData.recipient.name
-		) {
-			buyer = await this._resolvePerson(sql, orderData.buyer);
-			recipient = buyer;
-		} else {
-			[buyer, recipient] = await Promise.all([
-				this._resolvePerson(sql, orderData.buyer),
-				this._resolvePerson(sql, orderData.recipient),
-			]);
-		}
+		const [buyer, recipient] = await Promise.all([
+			this._getPerson(sql, orderData.buyer),
+			this._getPerson(sql, orderData.recipient),
+		]);
 
 		const [buyerPhone, buyerAddress, recipientPhone, recipientAddress] =
 			await Promise.all([
-				this._resolvePhone(sql, buyer.id, orderData.buyer.phone),
-				this._resolveAddress(sql, buyer.id, orderData.buyer.address),
-				this._resolvePhone(sql, recipient.id, orderData.recipient.phone),
-				this._resolveAddress(sql, recipient.id, orderData.recipient.address),
+				this._getPhone(sql, buyer.id, orderData.buyer.phone),
+				this._getAddress(sql, buyer.id, orderData.buyer.address),
+				this._getPhone(sql, recipient.id, orderData.recipient.phone),
+				this._getAddress(sql, recipient.id, orderData.recipient.address),
 			]);
 
 		const { subtotalAmount, itemsToInsert } =

@@ -12,7 +12,6 @@ export class ItemService {
 	async createItem(itemData: CreateItemInput): Promise<void> {
 		const normalizedName = normalizeNameForDb(itemData.name);
 		await this._validateItemNameUniqueness(this.db, normalizedName);
-
 		await this.repo.createItem(this.db, normalizedName, itemData.price);
 	}
 
@@ -32,12 +31,12 @@ export class ItemService {
 		if (!item) {
 			throw new NotFoundError(`Item with id ${itemId} not found`);
 		}
-		return { id: item.id, name: item.name, price: item.price };
+		return item;
 	}
 
 	private async _validateItemExists(sql: Sql, itemId: number): Promise<void> {
-		const existingItem = await this.repo.getItemById(sql, itemId);
-		if (!existingItem) {
+		const exists = await this.repo.itemExists(sql, itemId);
+		if (!exists) {
 			throw new NotFoundError(`Item with id ${itemId} not found`);
 		}
 	}
@@ -47,11 +46,9 @@ export class ItemService {
 		itemName: string,
 		currentItemId?: number,
 	): Promise<void> {
-		const existingItem = await this.repo.getItemByName(sql, itemName);
-		if (existingItem) {
-			if (currentItemId === undefined || existingItem.id !== currentItemId) {
-				throw new ConflictError(`Item with name ${itemName} already exists`);
-			}
+		const exists = await this.repo.itemNameExists(sql, itemName, currentItemId);
+		if (exists) {
+			throw new ConflictError(`Item with name ${itemName} already exists`);
 		}
 	}
 }

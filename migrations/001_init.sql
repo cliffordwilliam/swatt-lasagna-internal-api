@@ -73,6 +73,8 @@ CREATE TABLE person_phones (
   UNIQUE (person_id, phone_number)
 );
 
+CREATE INDEX person_phones_phone_number_search_idx ON person_phones USING gin (phone_number gin_trgm_ops);
+
 CREATE TABLE person_addresses (
   id SERIAL PRIMARY KEY,
   person_id INTEGER NOT NULL REFERENCES persons(id),
@@ -81,6 +83,8 @@ CREATE TABLE person_addresses (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (person_id, address)
 );
+
+CREATE INDEX person_addresses_address_search_idx ON person_addresses USING gin (address gin_trgm_ops);
 
 CREATE TABLE orders (
   id BIGSERIAL PRIMARY KEY,
