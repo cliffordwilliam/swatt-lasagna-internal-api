@@ -16,12 +16,12 @@ Table storing all orders.
 | note | TEXT | - | - |
 | buyer_id | INTEGER | NOT NULL | - |
 | buyer_name | VARCHAR(255) | NOT NULL | - |
-| buyer_phone | VARCHAR(25) | - | - |
-| buyer_address | TEXT | - | - |
+| buyer_phone | VARCHAR(25) | NOT NULL | - |
+| buyer_address | TEXT | NOT NULL | - |
 | recipient_id | INTEGER | NOT NULL | - |
 | recipient_name | VARCHAR(255) | NOT NULL | - |
-| recipient_phone | VARCHAR(25) | - | - |
-| recipient_address | TEXT | - | - |
+| recipient_phone | VARCHAR(25) | NOT NULL | - |
+| recipient_address | TEXT | NOT NULL | - |
 | delivery_method_id | INTEGER | NOT NULL | - |
 | payment_method_id | INTEGER | NOT NULL | - |
 | order_status_id | INTEGER | NOT NULL | - |
@@ -39,7 +39,7 @@ Table storing all orders.
 - **TIMESTAMPTZ**: Stores UTC and returns local time
 - **updated_at trigger**: Automatically updates on row modification
 - **No delete strategy**: For now, no hard or soft delete is planned
-- **Person data snapshot**: Business need person data snapshot on order creation.
+- **Person data snapshot**: Business need person data snapshot on order creation. Buyer and recipient name, phone, and address are required.
 - **Total amount**: Trusts app code to calculate correctly
 
 ## Indexes

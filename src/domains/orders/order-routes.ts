@@ -1,9 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
+import { IdParamSchema } from "../../lib/schemas.js";
 import {
 	type CreateOrderInput,
 	CreateOrderSchema,
 	GetOrderResponseSchema,
-	OrderSchema,
 	OrdersListSchema,
 } from "./order-schema.js";
 import { OrderService } from "./order-service.js";
@@ -16,12 +16,12 @@ const orderRoutes: FastifyPluginAsync = async (fastify) => {
 		{
 			schema: {
 				body: CreateOrderSchema,
-				response: { 201: OrderSchema },
+				response: { 201: { description: "OK" } },
 			},
 		},
 		async (request, reply) => {
-			const order = await orderService.createOrder(request.body);
-			return reply.status(201).send(order);
+			await orderService.createOrder(request.body);
+			return reply.status(201).send();
 		},
 	);
 
@@ -42,13 +42,7 @@ const orderRoutes: FastifyPluginAsync = async (fastify) => {
 		"/:id",
 		{
 			schema: {
-				params: {
-					type: "object",
-					properties: {
-						id: { type: "number" },
-					},
-					required: ["id"],
-				},
+				params: IdParamSchema,
 				response: { 200: GetOrderResponseSchema },
 			},
 		},
@@ -62,23 +56,14 @@ const orderRoutes: FastifyPluginAsync = async (fastify) => {
 		"/:id",
 		{
 			schema: {
-				params: {
-					type: "object",
-					properties: {
-						id: { type: "number" },
-					},
-					required: ["id"],
-				},
+				params: IdParamSchema,
 				body: CreateOrderSchema,
-				response: { 200: OrderSchema },
+				response: { 200: { description: "OK" } },
 			},
 		},
 		async (request, reply) => {
-			const order = await orderService.putOrder(
-				request.body,
-				request.params.id,
-			);
-			return reply.status(200).send(order);
+			await orderService.putOrder(request.body, request.params.id);
+			return reply.status(200).send();
 		},
 	);
 };

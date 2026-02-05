@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { IdParamSchema } from "../../lib/schemas.js";
 import {
 	type CreateItemInput,
 	CreateItemSchema,
@@ -41,13 +42,7 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
 		"/:id",
 		{
 			schema: {
-				params: {
-					type: "object",
-					properties: {
-						id: { type: "number" },
-					},
-					required: ["id"],
-				},
+				params: IdParamSchema,
 				response: { 200: ItemSummarySchema },
 			},
 		},
@@ -61,13 +56,7 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
 		"/:id",
 		{
 			schema: {
-				params: {
-					type: "object",
-					properties: {
-						id: { type: "number" },
-					},
-					required: ["id"],
-				},
+				params: IdParamSchema,
 				body: CreateItemSchema,
 				response: { 200: { description: "OK" } },
 			},

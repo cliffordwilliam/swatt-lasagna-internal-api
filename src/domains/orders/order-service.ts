@@ -20,11 +20,11 @@ import { OrderRepository } from "./order-repository.js";
 import type {
 	CreateOrderInput,
 	GetOrderResponse,
+	GetOrderWithRelatedDataRow,
 	OrderItemInput,
 	OrderItemInsert,
 	OrderItemValues,
 	OrderListRow,
-	OrderRow,
 	PreparedOrderData,
 } from "./order-schema.js";
 
@@ -40,120 +40,78 @@ export class OrderService {
 
 	constructor(private db: Sql) {}
 
-	async createOrder(orderData: CreateOrderInput): Promise<OrderRow> {
+	async createOrder(orderData: CreateOrderInput): Promise<void> {
 		this._validateOrderDates(orderData.order_date, orderData.delivery_date);
 		this._validateNoDuplicateItems(orderData.items);
+
+		orderData = {
+			...orderData,
+			order_number: normalizeNameForDb(orderData.order_number),
+		};
 
 		return await this.db.begin(async (sql) => {
 			await sql`SET TRANSACTION ISOLATION LEVEL READ COMMITTED`;
 			await sql`SET LOCAL statement_timeout = '30s'`;
 
-			const normalizedOrderNumber = normalizeNameForDb(orderData.order_number);
-			await this._validateOrderNumberUniqueness(sql, normalizedOrderNumber);
+			await this._validateOrderNumberUniqueness(sql, orderData.order_number);
 
-			const {
-				buyer,
-				recipient,
-				buyerPhone,
-				buyerAddress,
-				recipientPhone,
-				recipientAddress,
-				subtotalAmount,
-				totalAmount,
-				itemsToInsert,
-			} = await this._prepareOrderTransaction(sql, {
-				...orderData,
-				order_number: normalizedOrderNumber,
-			});
+			const PreparedOrderData = await this._prepareOrderTransaction(
+				sql,
+				orderData,
+			);
 
 			const insertedOrder = await this.repo.insertOrder(
 				sql,
-				{ ...orderData, order_number: normalizedOrderNumber },
-				{
-					buyerId: buyer.id,
-					buyerName: buyer.name,
-					buyerPhone: buyerPhone.phone_number,
-					buyerAddress: buyerAddress.address,
-					recipientId: recipient.id,
-					recipientName: recipient.name,
-					recipientPhone: recipientPhone.phone_number,
-					recipientAddress: recipientAddress.address,
-					subtotalAmount,
-					totalAmount,
-				},
+				orderData,
+				PreparedOrderData,
 			);
 
-			const finalItems: OrderItemInsert[] = itemsToInsert.map((item) => ({
-				...item,
-				order_id: insertedOrder.id,
-			}));
+			const finalItems: OrderItemInsert[] = PreparedOrderData.itemsToInsert.map(
+				(item) => ({
+					...item,
+					order_id: insertedOrder.id,
+				}),
+			);
 			await this.repo.insertOrderItems(sql, finalItems);
-
-			return insertedOrder;
 		});
 	}
 
-	async putOrder(
-		orderData: CreateOrderInput,
-		orderId: number,
-	): Promise<OrderRow> {
+	async putOrder(orderData: CreateOrderInput, orderId: number): Promise<void> {
 		this._validateOrderDates(orderData.order_date, orderData.delivery_date);
 		this._validateNoDuplicateItems(orderData.items);
 
-		return await this.db.begin(async (sql) => {
+		orderData = {
+			...orderData,
+			order_number: normalizeNameForDb(orderData.order_number),
+		};
+
+		await this.db.begin(async (sql) => {
 			await sql`SET TRANSACTION ISOLATION LEVEL READ COMMITTED`;
 			await sql`SET LOCAL statement_timeout = '30s'`;
 
 			await this._validateOrderExists(sql, orderId);
-			const normalizedOrderNumber = normalizeNameForDb(orderData.order_number);
 			await this._validateOrderNumberUniqueness(
 				sql,
-				normalizedOrderNumber,
+				orderData.order_number,
 				orderId,
 			);
 
-			const {
-				buyer,
-				recipient,
-				buyerPhone,
-				buyerAddress,
-				recipientPhone,
-				recipientAddress,
-				subtotalAmount,
-				totalAmount,
-				itemsToInsert,
-			} = await this._prepareOrderTransaction(sql, {
-				...orderData,
-				order_number: normalizedOrderNumber,
-			});
-
-			const updatedOrder = await this.repo.updateOrder(
+			const PreparedOrderData = await this._prepareOrderTransaction(
 				sql,
-				orderId,
-				{ ...orderData, order_number: normalizedOrderNumber },
-				{
-					buyerId: buyer.id,
-					buyerName: buyer.name,
-					buyerPhone: buyerPhone.phone_number,
-					buyerAddress: buyerAddress.address,
-					recipientId: recipient.id,
-					recipientName: recipient.name,
-					recipientPhone: recipientPhone.phone_number,
-					recipientAddress: recipientAddress.address,
-					subtotalAmount,
-					totalAmount,
-				},
+				orderData,
 			);
+
+			await this.repo.updateOrder(sql, orderId, orderData, PreparedOrderData);
 
 			await this.repo.deleteOrderItems(sql, orderId);
 
-			const finalItems: OrderItemInsert[] = itemsToInsert.map((item) => ({
-				...item,
-				order_id: updatedOrder.id,
-			}));
+			const finalItems: OrderItemInsert[] = PreparedOrderData.itemsToInsert.map(
+				(item) => ({
+					...item,
+					order_id: orderId,
+				}),
+			);
 			await this.repo.insertOrderItems(sql, finalItems);
-
-			return updatedOrder;
 		});
 	}
 
@@ -162,154 +120,59 @@ export class OrderService {
 	}
 
 	async getOrderById(orderId: number): Promise<GetOrderResponse> {
-		const order = await this.repo.getOrderWithItemsById(this.db, orderId);
-		if (!order) {
+		const [orderRow, items] = await Promise.all([
+			this.repo.getOrderWithRelatedDataById(this.db, orderId),
+			this.repo.getOrderItemsByOrderId(this.db, orderId),
+		]);
+		if (!orderRow) {
 			throw new NotFoundError(`Order with id ${orderId} not found`);
 		}
+		return this._rowToGetOrderResponse({ ...orderRow, items });
+	}
 
-		const items = await this.repo.getOrderItemsByOrderId(this.db, orderId);
-
-		// Find phone and address IDs for buyer
-		const buyerPhoneId = await this.phoneRepo.getPhoneIdByNumber(
-			this.db,
-			order.buyer_id,
-			order.buyer_phone,
-		);
-		if (!buyerPhoneId) {
-			throw new NotFoundError(
-				`Phone number for buyer (person_id: ${order.buyer_id}) not found`,
-			);
-		}
-
-		const buyerAddressId = await this.addressRepo.getAddressIdByValue(
-			this.db,
-			order.buyer_id,
-			order.buyer_address,
-		);
-		if (!buyerAddressId) {
-			throw new NotFoundError(
-				`Address for buyer (person_id: ${order.buyer_id}) not found`,
-			);
-		}
-
-		// Find phone and address IDs for recipient
-		const recipientPhoneId = await this.phoneRepo.getPhoneIdByNumber(
-			this.db,
-			order.recipient_id,
-			order.recipient_phone,
-		);
-		if (!recipientPhoneId) {
-			throw new NotFoundError(
-				`Phone number for recipient (person_id: ${order.recipient_id}) not found`,
-			);
-		}
-
-		const recipientAddressId = await this.addressRepo.getAddressIdByValue(
-			this.db,
-			order.recipient_id,
-			order.recipient_address,
-		);
-		if (!recipientAddressId) {
-			throw new NotFoundError(
-				`Address for recipient (person_id: ${order.recipient_id}) not found`,
-			);
-		}
-
-		// Get buyer and recipient person details
-		const buyer = await this.personRepo.getPersonById(this.db, order.buyer_id);
-		if (!buyer) {
-			throw new NotFoundError(`Buyer with id ${order.buyer_id} not found`);
-		}
-
-		const recipient = await this.personRepo.getPersonById(
-			this.db,
-			order.recipient_id,
-		);
-		if (!recipient) {
-			throw new NotFoundError(
-				`Recipient with id ${order.recipient_id} not found`,
-			);
-		}
-
-		// Get phone and address details
-		const buyerPhone = await this.phoneRepo.getPhoneById(this.db, buyerPhoneId);
-		if (!buyerPhone) {
-			throw new NotFoundError(`Buyer phone with id ${buyerPhoneId} not found`);
-		}
-
-		const buyerAddress = await this.addressRepo.getAddressById(
-			this.db,
-			buyerAddressId,
-		);
-		if (!buyerAddress) {
-			throw new NotFoundError(
-				`Buyer address with id ${buyerAddressId} not found`,
-			);
-		}
-
-		const recipientPhone = await this.phoneRepo.getPhoneById(
-			this.db,
-			recipientPhoneId,
-		);
-		if (!recipientPhone) {
-			throw new NotFoundError(
-				`Recipient phone with id ${recipientPhoneId} not found`,
-			);
-		}
-
-		const recipientAddress = await this.addressRepo.getAddressById(
-			this.db,
-			recipientAddressId,
-		);
-		if (!recipientAddress) {
-			throw new NotFoundError(
-				`Recipient address with id ${recipientAddressId} not found`,
-			);
-		}
-
-		// Transform to GetOrderResponse format with names
-		const result: GetOrderResponse = {
-			order_number: order.order_number,
-			order_date: order.order_date.toISOString(),
-			delivery_date: order.delivery_date.toISOString(),
+	private _rowToGetOrderResponse(
+		row: GetOrderWithRelatedDataRow,
+	): GetOrderResponse {
+		return {
+			order_number: row.order_number,
+			order_date: row.order_date.toISOString(),
+			delivery_date: row.delivery_date.toISOString(),
 			buyer: {
-				id: buyer.id,
-				name: buyer.name,
+				id: row.buyer_id,
+				name: row.buyer_name,
 				phone: {
-					id: buyerPhone.id,
-					phone_number: buyerPhone.phone_number,
+					id: row.buyer_phone_id,
+					phone_number: row.buyer_phone_number,
 				},
 				address: {
-					id: buyerAddress.id,
-					address: buyerAddress.address,
+					id: row.buyer_address_id,
+					address: row.buyer_address_value,
 				},
 			},
 			recipient: {
-				id: recipient.id,
-				name: recipient.name,
+				id: row.recipient_id,
+				name: row.recipient_name,
 				phone: {
-					id: recipientPhone.id,
-					phone_number: recipientPhone.phone_number,
+					id: row.recipient_phone_id,
+					phone_number: row.recipient_phone_number,
 				},
 				address: {
-					id: recipientAddress.id,
-					address: recipientAddress.address,
+					id: row.recipient_address_id,
+					address: row.recipient_address_value,
 				},
 			},
-			delivery_method_id: order.delivery_method_id,
-			payment_method_id: order.payment_method_id,
-			order_status_id: order.order_status_id,
-			shipping_cost: order.shipping_cost,
-			note: order.note ?? undefined,
-			items: items.map((item) => ({
+			delivery_method_id: row.delivery_method_id,
+			payment_method_id: row.payment_method_id,
+			order_status_id: row.order_status_id,
+			shipping_cost: row.shipping_cost,
+			note: row.note ?? undefined,
+			items: row.items.map((item) => ({
 				item_id: item.item_id,
 				item_name: item.item_name,
 				item_price: item.item_price,
 				quantity: item.quantity,
 			})),
 		};
-
-		return result;
 	}
 
 	private async _getPerson(
@@ -469,13 +332,6 @@ export class OrderService {
 		return { subtotalAmount, itemsToInsert };
 	}
 
-	// Concurrent operations handling:
-	// - Item/DeliveryMethod/PaymentMethod/OrderStatus deletion during order create/update
-	//   will cause NotFoundError - acceptable as these are rare admin operations
-	// - Item price changes during order entry will use the price at query time
-	//   (historical pricing snapshot) - this is intentional
-	// - Multiple employees creating/updating the SAME order simultaneously is not handled
-	//   but is extremely unlikely in our phone-order workflow (one call = one order)
 	private async _prepareOrderTransaction(
 		sql: Sql,
 		orderData: CreateOrderInput,

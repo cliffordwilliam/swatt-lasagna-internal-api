@@ -2,7 +2,6 @@ import { type Static, Type } from "@sinclair/typebox";
 import type { AddressSummaryRow as AddressRow } from "../addresses/address-schema.js";
 import { SearchAddressResultSchema } from "../addresses/address-schema.js";
 import type { PersonRow } from "../persons/person-schema.js";
-import { PersonSchema } from "../persons/person-schema.js";
 import type { PhoneSummaryRow as PhoneRow } from "../phones/phone-schema.js";
 import { SearchPhoneResultSchema } from "../phones/phone-schema.js";
 
@@ -75,30 +74,6 @@ export const GetOrderResponseSchema = Type.Object({
 
 export type GetOrderResponse = Static<typeof GetOrderResponseSchema>;
 
-export const OrderSchema = Type.Object({
-	id: Type.Integer(),
-	order_number: Type.String({ minLength: 1, maxLength: 50 }),
-	order_date: Type.String({ format: "date-time" }),
-	delivery_date: Type.String({ format: "date-time" }),
-	buyer_id: Type.Integer(),
-	buyer_name: Type.String({ minLength: 1, maxLength: 255 }),
-	buyer_phone: Type.Union([Type.String({ maxLength: 25 }), Type.Null()]),
-	buyer_address: Type.Union([Type.String({ maxLength: 500 }), Type.Null()]),
-	recipient_id: Type.Integer(),
-	recipient_name: Type.String({ minLength: 1, maxLength: 255 }),
-	recipient_phone: Type.Union([Type.String({ maxLength: 25 }), Type.Null()]),
-	recipient_address: Type.Union([Type.String({ maxLength: 500 }), Type.Null()]),
-	delivery_method_id: Type.Integer(),
-	payment_method_id: Type.Integer(),
-	order_status_id: Type.Integer(),
-	shipping_cost: Type.Integer({ minimum: 0, maximum: 1000000000 }),
-	subtotal_amount: Type.Integer({ minimum: 0, maximum: 1000000000 }),
-	total_amount: Type.Integer({ minimum: 0, maximum: 1000000000 }),
-	note: Type.Union([Type.String(), Type.Null()]),
-	created_at: Type.String({ format: "date-time" }),
-	updated_at: Type.String({ format: "date-time" }),
-});
-
 export interface OrderRow {
 	id: number;
 	order_number: string;
@@ -106,12 +81,12 @@ export interface OrderRow {
 	delivery_date: Date;
 	buyer_id: number;
 	buyer_name: string;
-	buyer_phone: string | null;
-	buyer_address: string | null;
+	buyer_phone: string;
+	buyer_address: string;
 	recipient_id: number;
 	recipient_name: string;
-	recipient_phone: string | null;
-	recipient_address: string | null;
+	recipient_phone: string;
+	recipient_address: string;
 	delivery_method_id: number;
 	payment_method_id: number;
 	order_status_id: number;
@@ -145,14 +120,13 @@ export type PreparedOrderData = {
 	itemsToInsert: OrderItemValues[];
 };
 
-/** List view: subset of order fields returned by getAllOrders */
 export const OrderListSchema = Type.Object({
 	id: Type.Integer(),
 	order_number: Type.String({ minLength: 1, maxLength: 50 }),
 	order_date: Type.String({ format: "date-time" }),
 	delivery_date: Type.String({ format: "date-time" }),
 	recipient_name: Type.String({ minLength: 1, maxLength: 255 }),
-	recipient_address: Type.Union([Type.String({ maxLength: 500 }), Type.Null()]),
+	recipient_address: Type.String({ maxLength: 500 }),
 	order_status_name: Type.String(),
 	total_amount: Type.Integer({ minimum: 0, maximum: 1000000000 }),
 });
@@ -165,7 +139,38 @@ export interface OrderListRow {
 	order_date: Date;
 	delivery_date: Date;
 	recipient_name: string;
-	recipient_address: string | null;
+	recipient_address: string;
 	order_status_name: string;
 	total_amount: number;
 }
+
+export interface GetOrderWithRelatedDataRow {
+	order_number: string;
+	order_date: Date;
+	delivery_date: Date;
+	delivery_method_id: number;
+	payment_method_id: number;
+	order_status_id: number;
+	shipping_cost: number;
+	note: string | null;
+	buyer_id: number;
+	buyer_name: string;
+	buyer_phone_id: number;
+	buyer_phone_number: string;
+	buyer_address_id: number;
+	buyer_address_value: string;
+	recipient_id: number;
+	recipient_name: string;
+	recipient_phone_id: number;
+	recipient_phone_number: string;
+	recipient_address_id: number;
+	recipient_address_value: string;
+	items: Array<{
+		item_id: number;
+		item_name: string;
+		item_price: number;
+		quantity: number;
+	}>;
+}
+
+export type OrderWithRelatedNoItems = Omit<GetOrderWithRelatedDataRow, "items">;

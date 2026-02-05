@@ -2,28 +2,19 @@ import type { Sql } from "postgres";
 import type {
 	CreateOrderInput,
 	OrderItemInsert,
+	OrderItemResponse,
 	OrderListRow,
-	OrderRow,
+	OrderWithRelatedNoItems,
+	PreparedOrderData,
 } from "./order-schema.js";
 
 export class OrderRepository {
 	async insertOrder(
 		sql: Sql,
 		orderData: CreateOrderInput,
-		orderInsert: {
-			buyerId: number;
-			buyerName: string;
-			buyerPhone: string | null;
-			buyerAddress: string | null;
-			recipientId: number;
-			recipientName: string;
-			recipientPhone: string | null;
-			recipientAddress: string | null;
-			subtotalAmount: number;
-			totalAmount: number;
-		},
-	): Promise<OrderRow> {
-		const [order] = await sql<OrderRow[]>`
+		PreparedOrderData: PreparedOrderData,
+	): Promise<{ id: number }> {
+		const [order] = await sql<[{ id: number }]>`
 			INSERT INTO orders (
 				order_number,
 				order_date,
@@ -48,42 +39,21 @@ export class OrderRepository {
 				${orderData.order_date},
 				${orderData.delivery_date},
 				${orderData.shipping_cost},
-				${orderInsert.subtotalAmount},
-				${orderInsert.totalAmount},
+				${PreparedOrderData.subtotalAmount},
+				${PreparedOrderData.totalAmount},
 				${orderData.note ?? null},
-				${orderInsert.buyerId},
-				${orderInsert.buyerName},
-				${orderInsert.buyerPhone},
-				${orderInsert.buyerAddress},
-				${orderInsert.recipientId},
-				${orderInsert.recipientName},
-				${orderInsert.recipientPhone},
-				${orderInsert.recipientAddress},
+				${PreparedOrderData.buyer.id},
+				${PreparedOrderData.buyer.name},
+				${PreparedOrderData.buyerPhone.phone_number},
+				${PreparedOrderData.buyerAddress.address},
+				${PreparedOrderData.recipient.id},
+				${PreparedOrderData.recipient.name},
+				${PreparedOrderData.recipientPhone.phone_number},
+				${PreparedOrderData.recipientAddress.address},
 				${orderData.delivery_method_id},
 				${orderData.payment_method_id},
 				${orderData.order_status_id}
-			) RETURNING
-				id,
-				order_number,
-				order_date,
-				delivery_date,
-				buyer_id,
-				buyer_name,
-				buyer_phone,
-				buyer_address,
-				recipient_id,
-				recipient_name,
-				recipient_phone,
-				recipient_address,
-				delivery_method_id,
-				payment_method_id,
-				order_status_id,
-				shipping_cost,
-				subtotal_amount,
-				total_amount,
-				note,
-				created_at,
-				updated_at
+			) RETURNING id
 		`;
 		return order!;
 	}
@@ -92,65 +62,31 @@ export class OrderRepository {
 		sql: Sql,
 		orderId: number,
 		orderData: CreateOrderInput,
-		orderUpdate: {
-			buyerId: number;
-			buyerName: string;
-			buyerPhone: string | null;
-			buyerAddress: string | null;
-			recipientId: number;
-			recipientName: string;
-			recipientPhone: string | null;
-			recipientAddress: string | null;
-			subtotalAmount: number;
-			totalAmount: number;
-		},
-	): Promise<OrderRow> {
-		const [order] = await sql<OrderRow[]>`
+		preparedOrderData: PreparedOrderData,
+	): Promise<void> {
+		await sql`
 			UPDATE orders SET
 				order_number = ${orderData.order_number},
 				order_date = ${orderData.order_date},
 				delivery_date = ${orderData.delivery_date},
 				shipping_cost = ${orderData.shipping_cost},
-				subtotal_amount = ${orderUpdate.subtotalAmount},
-				total_amount = ${orderUpdate.totalAmount},
+				subtotal_amount = ${preparedOrderData.subtotalAmount},
+				total_amount = ${preparedOrderData.totalAmount},
 				note = ${orderData.note ?? null},
-				buyer_id = ${orderUpdate.buyerId},
-				buyer_name = ${orderUpdate.buyerName},
-				buyer_phone = ${orderUpdate.buyerPhone},
-				buyer_address = ${orderUpdate.buyerAddress},
-				recipient_id = ${orderUpdate.recipientId},
-				recipient_name = ${orderUpdate.recipientName},
-				recipient_phone = ${orderUpdate.recipientPhone},
-				recipient_address = ${orderUpdate.recipientAddress},
+				buyer_id = ${preparedOrderData.buyer.id},
+				buyer_name = ${preparedOrderData.buyer.name},
+				buyer_phone = ${preparedOrderData.buyerPhone.phone_number},
+				buyer_address = ${preparedOrderData.buyerAddress.address},
+				recipient_id = ${preparedOrderData.recipient.id},
+				recipient_name = ${preparedOrderData.recipient.name},
+				recipient_phone = ${preparedOrderData.recipientPhone.phone_number},
+				recipient_address = ${preparedOrderData.recipientAddress.address},
 				delivery_method_id = ${orderData.delivery_method_id},
 				payment_method_id = ${orderData.payment_method_id},
 				order_status_id = ${orderData.order_status_id},
 				updated_at = NOW()
 			WHERE id = ${orderId}
-			RETURNING
-				id,
-				order_number,
-				order_date,
-				delivery_date,
-				buyer_id,
-				buyer_name,
-				buyer_phone,
-				buyer_address,
-				recipient_id,
-				recipient_name,
-				recipient_phone,
-				recipient_address,
-				delivery_method_id,
-				payment_method_id,
-				order_status_id,
-				shipping_cost,
-				subtotal_amount,
-				total_amount,
-				note,
-				created_at,
-				updated_at
 		`;
-		return order!;
 	}
 
 	async insertOrderItems(sql: Sql, items: OrderItemInsert[]): Promise<void> {
@@ -167,16 +103,6 @@ export class OrderRepository {
 	): Promise<{ id: number } | undefined> {
 		const [order] = await sql<{ id: number }[]>`
 			SELECT id FROM orders WHERE id = ${orderId}
-		`;
-		return order;
-	}
-
-	async getOrderNumber(
-		sql: Sql,
-		orderNumber: string,
-	): Promise<{ id: number } | undefined> {
-		const [order] = await sql<{ id: number }[]>`
-			SELECT id FROM orders WHERE order_number = ${orderNumber}
 		`;
 		return order;
 	}
@@ -213,66 +139,64 @@ export class OrderRepository {
 				order_statuses.name as order_status_name,
 				orders.total_amount
 			FROM orders
-			LEFT JOIN order_statuses ON orders.order_status_id = order_statuses.id
+			JOIN order_statuses ON orders.order_status_id = order_statuses.id
 		`;
-	}
-
-	async getOrderWithItemsById(
-		sql: Sql,
-		orderId: number,
-	): Promise<OrderRow | undefined> {
-		const [order] = await sql<OrderRow[]>`
-			SELECT
-				id,
-				order_number,
-				order_date,
-				delivery_date,
-				buyer_id,
-				buyer_name,
-				buyer_phone,
-				buyer_address,
-				recipient_id,
-				recipient_name,
-				recipient_phone,
-				recipient_address,
-				delivery_method_id,
-				payment_method_id,
-				order_status_id,
-				shipping_cost,
-				subtotal_amount,
-				total_amount,
-				note,
-				created_at,
-				updated_at
-			FROM orders
-			WHERE id = ${orderId}
-		`;
-		return order;
 	}
 
 	async getOrderItemsByOrderId(
 		sql: Sql,
 		orderId: number,
-	): Promise<
-		Array<{
-			item_id: number;
-			item_name: string;
-			item_price: number;
-			quantity: number;
-		}>
-	> {
-		return await sql<
-			Array<{
-				item_id: number;
-				item_name: string;
-				item_price: number;
-				quantity: number;
-			}>
-		>`
+	): Promise<OrderItemResponse[]> {
+		return await sql<OrderItemResponse[]>`
 			SELECT item_id, item_name, item_price, quantity
 			FROM order_items
 			WHERE order_id = ${orderId}
-			ORDER BY item_id
 		`;
+	}
+
+	async getOrderWithRelatedDataById(
+		sql: Sql,
+		orderId: number,
+	): Promise<OrderWithRelatedNoItems | undefined> {
+		const [row] = await sql<OrderWithRelatedNoItems[]>`
+			SELECT
+				o.order_number,
+				o.order_date,
+				o.delivery_date,
+				o.delivery_method_id,
+				o.payment_method_id,
+				o.order_status_id,
+				o.shipping_cost,
+				o.note,
+				buyer.id AS buyer_id,
+				buyer.name AS buyer_name,
+				buyer_pp.id AS buyer_phone_id,
+				buyer_pp.phone_number AS buyer_phone_number,
+				buyer_pa.id AS buyer_address_id,
+				buyer_pa.address AS buyer_address_value,
+				recipient.id AS recipient_id,
+				recipient.name AS recipient_name,
+				recipient_pp.id AS recipient_phone_id,
+				recipient_pp.phone_number AS recipient_phone_number,
+				recipient_pa.id AS recipient_address_id,
+				recipient_pa.address AS recipient_address_value
+			FROM orders o
+			JOIN persons buyer ON buyer.id = o.buyer_id
+			JOIN persons recipient ON recipient.id = o.recipient_id
+			JOIN person_phones buyer_pp
+				ON buyer_pp.person_id = o.buyer_id
+				AND buyer_pp.phone_number IS NOT DISTINCT FROM o.buyer_phone
+			JOIN person_addresses buyer_pa
+				ON buyer_pa.person_id = o.buyer_id
+				AND buyer_pa.address IS NOT DISTINCT FROM o.buyer_address
+			JOIN person_phones recipient_pp
+				ON recipient_pp.person_id = o.recipient_id
+				AND recipient_pp.phone_number IS NOT DISTINCT FROM o.recipient_phone
+			JOIN person_addresses recipient_pa
+				ON recipient_pa.person_id = o.recipient_id
+				AND recipient_pa.address IS NOT DISTINCT FROM o.recipient_address
+			WHERE o.id = ${orderId}
+		`;
+		return row;
 	}
 }
