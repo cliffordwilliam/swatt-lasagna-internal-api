@@ -181,6 +181,26 @@ export class OrderRepository {
 		return order;
 	}
 
+	async orderNumberExists(
+		sql: Sql,
+		orderNumber: string,
+		excludeOrderId?: number,
+	): Promise<boolean> {
+		if (excludeOrderId !== undefined) {
+			const [result] = await sql<[{ exists: boolean }]>`
+				SELECT EXISTS(
+					SELECT 1 FROM orders
+					WHERE order_number = ${orderNumber} AND id != ${excludeOrderId}
+				) as exists
+			`;
+			return result.exists;
+		}
+		const [result] = await sql<[{ exists: boolean }]>`
+			SELECT EXISTS(SELECT 1 FROM orders WHERE order_number = ${orderNumber}) as exists
+		`;
+		return result.exists;
+	}
+
 	async getAllOrders(sql: Sql): Promise<OrderListRow[]> {
 		return await sql<OrderListRow[]>`
 			SELECT
@@ -194,6 +214,65 @@ export class OrderRepository {
 				orders.total_amount
 			FROM orders
 			LEFT JOIN order_statuses ON orders.order_status_id = order_statuses.id
+		`;
+	}
+
+	async getOrderWithItemsById(
+		sql: Sql,
+		orderId: number,
+	): Promise<OrderRow | undefined> {
+		const [order] = await sql<OrderRow[]>`
+			SELECT
+				id,
+				order_number,
+				order_date,
+				delivery_date,
+				buyer_id,
+				buyer_name,
+				buyer_phone,
+				buyer_address,
+				recipient_id,
+				recipient_name,
+				recipient_phone,
+				recipient_address,
+				delivery_method_id,
+				payment_method_id,
+				order_status_id,
+				shipping_cost,
+				subtotal_amount,
+				total_amount,
+				note,
+				created_at,
+				updated_at
+			FROM orders
+			WHERE id = ${orderId}
+		`;
+		return order;
+	}
+
+	async getOrderItemsByOrderId(
+		sql: Sql,
+		orderId: number,
+	): Promise<
+		Array<{
+			item_id: number;
+			item_name: string;
+			item_price: number;
+			quantity: number;
+		}>
+	> {
+		return await sql<
+			Array<{
+				item_id: number;
+				item_name: string;
+				item_price: number;
+				quantity: number;
+			}>
+		>`
+			SELECT item_id, item_name, item_price, quantity
+			FROM order_items
+			WHERE order_id = ${orderId}
+			ORDER BY item_id
 		`;
 	}
 }

@@ -5,6 +5,7 @@ import {
 	NotFoundError,
 	UnprocessableEntityError,
 } from "../../lib/errors.js";
+import { normalizeNameForDb } from "../../lib/string-utils.js";
 import { AddressRepository } from "../addresses/address-repository.js";
 import type { AddressSummaryRow as AddressRow } from "../addresses/address-schema.js";
 import { DeliveryMethodRepository } from "../delivery-methods/delivery-method-repository.js";
@@ -18,6 +19,7 @@ import type { PhoneSummaryRow as PhoneRow } from "../phones/phone-schema.js";
 import { OrderRepository } from "./order-repository.js";
 import type {
 	CreateOrderInput,
+	GetOrderResponse,
 	OrderItemInput,
 	OrderItemInsert,
 	OrderItemValues,
@@ -46,7 +48,8 @@ export class OrderService {
 			await sql`SET TRANSACTION ISOLATION LEVEL READ COMMITTED`;
 			await sql`SET LOCAL statement_timeout = '30s'`;
 
-			await this._validateOrderNumberUniqueness(sql, orderData.order_number);
+			const normalizedOrderNumber = normalizeNameForDb(orderData.order_number);
+			await this._validateOrderNumberUniqueness(sql, normalizedOrderNumber);
 
 			const {
 				buyer,
@@ -58,20 +61,27 @@ export class OrderService {
 				subtotalAmount,
 				totalAmount,
 				itemsToInsert,
-			} = await this._prepareOrderTransaction(sql, orderData);
-
-			const insertedOrder = await this.repo.insertOrder(sql, orderData, {
-				buyerId: buyer.id,
-				buyerName: buyer.name,
-				buyerPhone: buyerPhone.phone_number,
-				buyerAddress: buyerAddress.address,
-				recipientId: recipient.id,
-				recipientName: recipient.name,
-				recipientPhone: recipientPhone.phone_number,
-				recipientAddress: recipientAddress.address,
-				subtotalAmount,
-				totalAmount,
+			} = await this._prepareOrderTransaction(sql, {
+				...orderData,
+				order_number: normalizedOrderNumber,
 			});
+
+			const insertedOrder = await this.repo.insertOrder(
+				sql,
+				{ ...orderData, order_number: normalizedOrderNumber },
+				{
+					buyerId: buyer.id,
+					buyerName: buyer.name,
+					buyerPhone: buyerPhone.phone_number,
+					buyerAddress: buyerAddress.address,
+					recipientId: recipient.id,
+					recipientName: recipient.name,
+					recipientPhone: recipientPhone.phone_number,
+					recipientAddress: recipientAddress.address,
+					subtotalAmount,
+					totalAmount,
+				},
+			);
 
 			const finalItems: OrderItemInsert[] = itemsToInsert.map((item) => ({
 				...item,
@@ -95,9 +105,10 @@ export class OrderService {
 			await sql`SET LOCAL statement_timeout = '30s'`;
 
 			await this._validateOrderExists(sql, orderId);
+			const normalizedOrderNumber = normalizeNameForDb(orderData.order_number);
 			await this._validateOrderNumberUniqueness(
 				sql,
-				orderData.order_number,
+				normalizedOrderNumber,
 				orderId,
 			);
 
@@ -111,12 +122,15 @@ export class OrderService {
 				subtotalAmount,
 				totalAmount,
 				itemsToInsert,
-			} = await this._prepareOrderTransaction(sql, orderData);
+			} = await this._prepareOrderTransaction(sql, {
+				...orderData,
+				order_number: normalizedOrderNumber,
+			});
 
 			const updatedOrder = await this.repo.updateOrder(
 				sql,
 				orderId,
-				orderData,
+				{ ...orderData, order_number: normalizedOrderNumber },
 				{
 					buyerId: buyer.id,
 					buyerName: buyer.name,
@@ -145,6 +159,157 @@ export class OrderService {
 
 	async getAllOrders(): Promise<OrderListRow[]> {
 		return await this.repo.getAllOrders(this.db);
+	}
+
+	async getOrderById(orderId: number): Promise<GetOrderResponse> {
+		const order = await this.repo.getOrderWithItemsById(this.db, orderId);
+		if (!order) {
+			throw new NotFoundError(`Order with id ${orderId} not found`);
+		}
+
+		const items = await this.repo.getOrderItemsByOrderId(this.db, orderId);
+
+		// Find phone and address IDs for buyer
+		const buyerPhoneId = await this.phoneRepo.getPhoneIdByNumber(
+			this.db,
+			order.buyer_id,
+			order.buyer_phone,
+		);
+		if (!buyerPhoneId) {
+			throw new NotFoundError(
+				`Phone number for buyer (person_id: ${order.buyer_id}) not found`,
+			);
+		}
+
+		const buyerAddressId = await this.addressRepo.getAddressIdByValue(
+			this.db,
+			order.buyer_id,
+			order.buyer_address,
+		);
+		if (!buyerAddressId) {
+			throw new NotFoundError(
+				`Address for buyer (person_id: ${order.buyer_id}) not found`,
+			);
+		}
+
+		// Find phone and address IDs for recipient
+		const recipientPhoneId = await this.phoneRepo.getPhoneIdByNumber(
+			this.db,
+			order.recipient_id,
+			order.recipient_phone,
+		);
+		if (!recipientPhoneId) {
+			throw new NotFoundError(
+				`Phone number for recipient (person_id: ${order.recipient_id}) not found`,
+			);
+		}
+
+		const recipientAddressId = await this.addressRepo.getAddressIdByValue(
+			this.db,
+			order.recipient_id,
+			order.recipient_address,
+		);
+		if (!recipientAddressId) {
+			throw new NotFoundError(
+				`Address for recipient (person_id: ${order.recipient_id}) not found`,
+			);
+		}
+
+		// Get buyer and recipient person details
+		const buyer = await this.personRepo.getPersonById(this.db, order.buyer_id);
+		if (!buyer) {
+			throw new NotFoundError(`Buyer with id ${order.buyer_id} not found`);
+		}
+
+		const recipient = await this.personRepo.getPersonById(
+			this.db,
+			order.recipient_id,
+		);
+		if (!recipient) {
+			throw new NotFoundError(
+				`Recipient with id ${order.recipient_id} not found`,
+			);
+		}
+
+		// Get phone and address details
+		const buyerPhone = await this.phoneRepo.getPhoneById(this.db, buyerPhoneId);
+		if (!buyerPhone) {
+			throw new NotFoundError(`Buyer phone with id ${buyerPhoneId} not found`);
+		}
+
+		const buyerAddress = await this.addressRepo.getAddressById(
+			this.db,
+			buyerAddressId,
+		);
+		if (!buyerAddress) {
+			throw new NotFoundError(
+				`Buyer address with id ${buyerAddressId} not found`,
+			);
+		}
+
+		const recipientPhone = await this.phoneRepo.getPhoneById(
+			this.db,
+			recipientPhoneId,
+		);
+		if (!recipientPhone) {
+			throw new NotFoundError(
+				`Recipient phone with id ${recipientPhoneId} not found`,
+			);
+		}
+
+		const recipientAddress = await this.addressRepo.getAddressById(
+			this.db,
+			recipientAddressId,
+		);
+		if (!recipientAddress) {
+			throw new NotFoundError(
+				`Recipient address with id ${recipientAddressId} not found`,
+			);
+		}
+
+		// Transform to GetOrderResponse format with names
+		const result: GetOrderResponse = {
+			order_number: order.order_number,
+			order_date: order.order_date.toISOString(),
+			delivery_date: order.delivery_date.toISOString(),
+			buyer: {
+				id: buyer.id,
+				name: buyer.name,
+				phone: {
+					id: buyerPhone.id,
+					phone_number: buyerPhone.phone_number,
+				},
+				address: {
+					id: buyerAddress.id,
+					address: buyerAddress.address,
+				},
+			},
+			recipient: {
+				id: recipient.id,
+				name: recipient.name,
+				phone: {
+					id: recipientPhone.id,
+					phone_number: recipientPhone.phone_number,
+				},
+				address: {
+					id: recipientAddress.id,
+					address: recipientAddress.address,
+				},
+			},
+			delivery_method_id: order.delivery_method_id,
+			payment_method_id: order.payment_method_id,
+			order_status_id: order.order_status_id,
+			shipping_cost: order.shipping_cost,
+			note: order.note ?? undefined,
+			items: items.map((item) => ({
+				item_id: item.item_id,
+				item_name: item.item_name,
+				item_price: item.item_price,
+				quantity: item.quantity,
+			})),
+		};
+
+		return result;
 	}
 
 	private async _getPerson(
@@ -266,13 +431,15 @@ export class OrderService {
 		orderNumber: string,
 		currentOrderId?: number,
 	): Promise<void> {
-		const existingOrder = await this.repo.getOrderNumber(sql, orderNumber);
-		if (existingOrder) {
-			if (currentOrderId === undefined || existingOrder.id !== currentOrderId) {
-				throw new ConflictError(
-					`Order with number ${orderNumber} already exists`,
-				);
-			}
+		const exists = await this.repo.orderNumberExists(
+			sql,
+			orderNumber,
+			currentOrderId,
+		);
+		if (exists) {
+			throw new ConflictError(
+				`Order with number ${orderNumber} already exists`,
+			);
 		}
 	}
 

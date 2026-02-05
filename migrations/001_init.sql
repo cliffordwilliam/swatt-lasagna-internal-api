@@ -78,7 +78,8 @@ CREATE INDEX person_phones_phone_number_search_idx ON person_phones USING gin (p
 CREATE TABLE person_addresses (
   id SERIAL PRIMARY KEY,
   person_id INTEGER NOT NULL REFERENCES persons(id),
-  address TEXT NOT NULL,
+  address TEXT NOT NULL
+    CHECK (address = LOWER(TRIM(address)) AND address != '' AND address !~ '\s{2,}'),
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (person_id, address)
@@ -88,7 +89,8 @@ CREATE INDEX person_addresses_address_search_idx ON person_addresses USING gin (
 
 CREATE TABLE orders (
   id BIGSERIAL PRIMARY KEY,
-  order_number TEXT UNIQUE NOT NULL,
+  order_number TEXT UNIQUE NOT NULL
+    CHECK (order_number = LOWER(TRIM(order_number)) AND order_number != '' AND order_number !~ '\s{2,}'),
   order_date TIMESTAMPTZ NOT NULL,
   delivery_date TIMESTAMPTZ NOT NULL CHECK (delivery_date >= DATE(order_date)),
   shipping_cost BIGINT NOT NULL CHECK (shipping_cost >= 0),

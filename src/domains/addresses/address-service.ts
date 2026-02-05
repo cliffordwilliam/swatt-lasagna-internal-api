@@ -16,15 +16,16 @@ export class AddressService {
 
 	async createAddress(addressData: CreateAddressInput): Promise<void> {
 		await this._validatePersonExists(this.db, addressData.person_id);
+		const normalizedAddress = normalizeNameForDb(addressData.address);
 		await this._validateAddressUniqueness(
 			this.db,
 			addressData.person_id,
-			addressData.address,
+			normalizedAddress,
 		);
 		await this.repo.createAddress(
 			this.db,
 			addressData.person_id,
-			addressData.address,
+			normalizedAddress,
 		);
 	}
 

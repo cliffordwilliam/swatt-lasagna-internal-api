@@ -7,7 +7,7 @@ Table storing all orders.
 | Column | Type | Constraints | Default |
 |--------|------|-------------|---------|
 | id | BIGSERIAL | PRIMARY KEY | - |
-| order_number | TEXT | NOT NULL, UNIQUE | - |
+| order_number | TEXT | NOT NULL, UNIQUE, CHECK (lowercase, trimmed, non-empty, single spaces) | - |
 | order_date | TIMESTAMPTZ | NOT NULL | - |
 | delivery_date | TIMESTAMPTZ | NOT NULL, CHECK (delivery_date >= DATE(order_date)) | - |
 | shipping_cost | BIGINT | NOT NULL, CHECK (shipping_cost >= 0) | - |
@@ -33,7 +33,7 @@ Table storing all orders.
 - **BIGSERIAL for id**: Store is not multi-region, but orders grow fast, so BIGSERIAL is used
 - **PRIMARY KEY on id**: Order number may change, so id is the stable identifier
 - **Note**: No formatting or rules and is optional
-- **Order number**: No formatting or rules, it is required and unique to prevent concurrent insert duplicate
+- **Order number**: Required and unique to prevent concurrent insert duplicate. CHECK ensures lowercase, trimmed, non-empty, single spaces only
 - **Order date and delivery date**: Both required, delivery_date must be >= order_date
 - **Prices are BIGINT**: Store operates on IDR only, minimum is 0 for all price fields
 - **TIMESTAMPTZ**: Stores UTC and returns local time

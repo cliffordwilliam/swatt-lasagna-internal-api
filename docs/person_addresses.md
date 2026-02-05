@@ -8,7 +8,7 @@ Table storing all customer addresses.
 |--------|------|-------------|---------|
 | id | SERIAL | PRIMARY KEY | - |
 | person_id | INTEGER | NOT NULL | - |
-| address | TEXT | NOT NULL | - |
+| address | TEXT | NOT NULL, CHECK (lowercase, trimmed, non-empty, single spaces) | - |
 | created_at | TIMESTAMPTZ | NOT NULL | CURRENT_TIMESTAMP |
 | updated_at | TIMESTAMPTZ | NOT NULL | CURRENT_TIMESTAMP |
 
@@ -17,6 +17,7 @@ Table storing all customer addresses.
 - **SERIAL for id**: Store is not multi-region, so SERIAL is sufficient
 - **PRIMARY KEY on id**: Address may change, so id is the stable identifier
 - **Address is required**: Format is flexible
+- **Address constraints**: CHECK ensures lowercase, trimmed, non-empty, single spaces only
 - **Unique constraint on (person_id, address)**: A person cannot have duplicate addresses (e.g., Alice cannot have "asd" twice), but different people can have the same address (Alice and Bob can both have "asd")
 - **TIMESTAMPTZ**: Stores UTC and returns local time
 - **updated_at trigger**: Automatically updates on row modification
