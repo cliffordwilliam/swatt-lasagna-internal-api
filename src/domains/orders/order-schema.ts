@@ -101,6 +101,15 @@ const OrderListSchema = Type.Object({
 
 export const OrdersListSchema = Type.Array(OrderListSchema);
 
+export const ListOrdersQuerySchema = Type.Object({
+	order_date_from: Type.Optional(Type.String({ format: "date-time" })),
+	order_date_to: Type.Optional(Type.String({ format: "date-time" })),
+	order_status_id: Type.Optional(Type.Integer()),
+	order_number: Type.Optional(Type.String({ minLength: 1, maxLength: 50 })),
+});
+
+export type ListOrdersQuery = Static<typeof ListOrdersQuerySchema>;
+
 export interface OrderListRow {
 	id: number;
 	order_number: string;

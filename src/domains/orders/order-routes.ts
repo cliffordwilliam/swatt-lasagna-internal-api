@@ -4,6 +4,8 @@ import {
 	type CreateOrderInput,
 	CreateOrderSchema,
 	GetOrderResponseSchema,
+	type ListOrdersQuery,
+	ListOrdersQuerySchema,
 	OrdersListSchema,
 } from "./order-schema.js";
 import { OrderService } from "./order-service.js";
@@ -25,15 +27,16 @@ const orderRoutes: FastifyPluginAsync = async (fastify) => {
 		},
 	);
 
-	fastify.get(
+	fastify.get<{ Querystring: ListOrdersQuery }>(
 		"/",
 		{
 			schema: {
+				querystring: ListOrdersQuerySchema,
 				response: { 200: OrdersListSchema },
 			},
 		},
 		async (request, reply) => {
-			const orders = await orderService.getAllOrders();
+			const orders = await orderService.getAllOrders(request.query);
 			return reply.status(200).send(orders);
 		},
 	);

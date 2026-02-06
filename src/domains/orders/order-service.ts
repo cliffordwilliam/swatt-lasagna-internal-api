@@ -21,6 +21,7 @@ import type {
 	CreateOrderInput,
 	GetOrderResponse,
 	GetOrderWithRelatedDataRow,
+	ListOrdersQuery,
 	OrderItemInput,
 	OrderItemInsert,
 	OrderItemValues,
@@ -115,8 +116,8 @@ export class OrderService {
 		});
 	}
 
-	async getAllOrders(): Promise<OrderListRow[]> {
-		return await this.repo.getAllOrders(this.db);
+	async getAllOrders(filters: ListOrdersQuery = {}): Promise<OrderListRow[]> {
+		return await this.repo.getAllOrders(this.db, filters);
 	}
 
 	async getOrderById(orderId: number): Promise<GetOrderResponse> {

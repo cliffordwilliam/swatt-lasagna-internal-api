@@ -33,7 +33,7 @@ Table storing all orders.
 - **BIGSERIAL for id**: Store is not multi-region, but orders grow fast, so BIGSERIAL is used
 - **PRIMARY KEY on id**: Order number may change, so id is the stable identifier
 - **Note**: No formatting or rules and is optional
-- **Order number**: Required and unique to prevent concurrent insert duplicate. CHECK ensures lowercase, trimmed, non-empty, single spaces only
+- **Order number**: Required and unique to prevent concurrent insert duplicate. CHECK ensures lowercase, trimmed, non-empty, single spaces only. List-orders API filter uses ILIKE for partial, case-insensitive match (supported by GIN index).
 - **Order date and delivery date**: Both required, delivery_date must be >= order_date
 - **Prices are BIGINT**: Store operates on IDR only, minimum is 0 for all price fields
 - **TIMESTAMPTZ**: Stores UTC and returns local time
@@ -41,11 +41,14 @@ Table storing all orders.
 - **No delete strategy**: For now, no hard or soft delete is planned
 - **Person data snapshot**: Business need person data snapshot on order creation. Buyer and recipient name, phone, and address are required.
 - **Total amount**: Trusts app code to calculate correctly
+- **Composite index (order_date, order_status_id)**: List-orders query is ordered by order_date DESC and often filtered by order_status_id. The index column order (order_date first, then order_status_id) gives good correlation with the query so the planner can avoid a separate sort. Order date is the leading column because we most often filter/order by order date first and then by order status; order_date-only queries use the index prefix, and it is less likely we ever query by order_status alone or order_status first. Updating order status is the most frequent update; because only that column changes, HOT (Heap-Only Tuple) updates can apply when the updated row still fits on the same page, avoiding extra index maintenance where possible.
 
 ## Indexes
 
 - PRIMARY KEY on `id`
 - UNIQUE constraint on `order_number` (implicit index for order_number lookup)
+- `orders_order_number_search_idx`: GIN index on `order_number` using `gin_trgm_ops` for efficient ILIKE search queries (list orders filter)
+- `orders_order_date_status_idx`: Composite B-tree index on `(order_date DESC, order_status_id)` for list-orders (order by order_date, filter by date range and status); column order and direction match the common query pattern
 
 ## Foreign Keys
 

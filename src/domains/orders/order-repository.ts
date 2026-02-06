@@ -1,6 +1,7 @@
 import type { Sql } from "postgres";
 import type {
 	CreateOrderInput,
+	ListOrdersQuery,
 	OrderItemInsert,
 	OrderItemResponse,
 	OrderListRow,
@@ -119,7 +120,10 @@ export class OrderRepository {
 		return result.exists;
 	}
 
-	async getAllOrders(sql: Sql): Promise<OrderListRow[]> {
+	async getAllOrders(
+		sql: Sql,
+		filters: ListOrdersQuery = {},
+	): Promise<OrderListRow[]> {
 		return await sql<OrderListRow[]>`
 			SELECT
 				orders.id,
@@ -132,6 +136,13 @@ export class OrderRepository {
 				orders.total_amount
 			FROM orders
 			JOIN order_statuses ON orders.order_status_id = order_statuses.id
+			WHERE 1=1
+			${filters.order_date_from !== undefined ? sql`AND orders.order_date >= ${filters.order_date_from}` : sql``}
+			${filters.order_date_to !== undefined ? sql`AND orders.order_date <= ${filters.order_date_to}` : sql``}
+			${filters.order_status_id !== undefined ? sql`AND orders.order_status_id = ${filters.order_status_id}` : sql``}
+			${filters.order_number !== undefined ? sql`AND orders.order_number ILIKE ${`%${filters.order_number}%`}` : sql``}
+			ORDER BY orders.order_date DESC
+			LIMIT 50
 		`;
 	}
 

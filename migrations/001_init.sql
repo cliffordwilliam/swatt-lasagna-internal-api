@@ -112,6 +112,9 @@ CREATE TABLE orders (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE INDEX orders_order_number_search_idx ON orders USING gin (order_number gin_trgm_ops);
+CREATE INDEX orders_order_date_status_idx ON orders (order_date DESC, order_status_id);
+
 CREATE TABLE order_items (
   order_id BIGINT NOT NULL REFERENCES orders(id),
   item_id INTEGER NOT NULL REFERENCES items(id),
