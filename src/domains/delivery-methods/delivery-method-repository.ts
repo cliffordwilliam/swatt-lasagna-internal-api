@@ -8,13 +8,10 @@ export class DeliveryMethodRepository {
 		`;
 	}
 
-	async getDeliveryMethodById(
-		sql: Sql,
-		id: number,
-	): Promise<{ id: number } | undefined> {
-		const [method] = await sql<{ id: number }[]>`
-			SELECT id FROM delivery_methods WHERE id = ${id}
+	async deliveryMethodExists(sql: Sql, id: number): Promise<boolean> {
+		const [result] = await sql<[{ exists: boolean }]>`
+			SELECT EXISTS(SELECT 1 FROM delivery_methods WHERE id = ${id}) as exists
 		`;
-		return method;
+		return result.exists;
 	}
 }

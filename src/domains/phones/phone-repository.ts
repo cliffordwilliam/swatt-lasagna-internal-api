@@ -51,20 +51,4 @@ export class PhoneRepository {
 		`;
 		return result.exists;
 	}
-
-	async getPhoneIdByNumber(
-		sql: Sql,
-		personId: number,
-		phoneNumber: string | null,
-	): Promise<number | null> {
-		if (!phoneNumber) {
-			return null;
-		}
-		const [phone] = await sql<[{ id: number } | undefined]>`
-			SELECT id FROM person_phones
-			WHERE person_id = ${personId} AND phone_number = ${phoneNumber}
-			LIMIT 1
-		`;
-		return phone?.id ?? null;
-	}
 }

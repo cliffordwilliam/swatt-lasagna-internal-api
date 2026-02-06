@@ -7,17 +7,7 @@ export const CreateAddressSchema = Type.Object({
 
 export type CreateAddressInput = Static<typeof CreateAddressSchema>;
 
-export const AddressSchema = Type.Object({
-	id: Type.Integer(),
-	person_id: Type.Integer(),
-	address: Type.String({ minLength: 1, maxLength: 500 }),
-	created_at: Type.String({ format: "date-time" }),
-	updated_at: Type.String({ format: "date-time" }),
-});
-
-export type AddressRow = Static<typeof AddressSchema>;
-
-export const AddressSummarySchema = Type.Object({
+const AddressSummarySchema = Type.Object({
 	id: Type.Integer(),
 	person_id: Type.Integer(),
 	address: Type.String({ minLength: 1, maxLength: 500 }),

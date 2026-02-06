@@ -6,7 +6,7 @@ export const CreatePersonSchema = Type.Object({
 
 export type CreatePersonInput = Static<typeof CreatePersonSchema>;
 
-export const PersonSchema = Type.Object({
+const PersonSchema = Type.Object({
 	id: Type.Integer(),
 	name: Type.String(),
 });

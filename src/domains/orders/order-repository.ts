@@ -97,14 +97,11 @@ export class OrderRepository {
 		await sql`DELETE FROM order_items WHERE order_id = ${orderId}`;
 	}
 
-	async getOrderById(
-		sql: Sql,
-		orderId: number,
-	): Promise<{ id: number } | undefined> {
-		const [order] = await sql<{ id: number }[]>`
-			SELECT id FROM orders WHERE id = ${orderId}
+	async orderExists(sql: Sql, orderId: number): Promise<boolean> {
+		const [result] = await sql<[{ exists: boolean }]>`
+			SELECT EXISTS(SELECT 1 FROM orders WHERE id = ${orderId}) as exists
 		`;
-		return order;
+		return result.exists;
 	}
 
 	async orderNumberExists(
@@ -112,17 +109,12 @@ export class OrderRepository {
 		orderNumber: string,
 		excludeOrderId?: number,
 	): Promise<boolean> {
-		if (excludeOrderId !== undefined) {
-			const [result] = await sql<[{ exists: boolean }]>`
-				SELECT EXISTS(
-					SELECT 1 FROM orders
-					WHERE order_number = ${orderNumber} AND id != ${excludeOrderId}
-				) as exists
-			`;
-			return result.exists;
-		}
 		const [result] = await sql<[{ exists: boolean }]>`
-			SELECT EXISTS(SELECT 1 FROM orders WHERE order_number = ${orderNumber}) as exists
+			SELECT EXISTS(
+				SELECT 1 FROM orders
+				WHERE order_number = ${orderNumber}
+				${excludeOrderId !== undefined ? sql`AND id != ${excludeOrderId}` : sql``}
+			) as exists
 		`;
 		return result.exists;
 	}

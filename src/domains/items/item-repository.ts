@@ -53,17 +53,12 @@ export class ItemRepository {
 		name: string,
 		excludeItemId?: number,
 	): Promise<boolean> {
-		if (excludeItemId !== undefined) {
-			const [result] = await sql<[{ exists: boolean }]>`
-				SELECT EXISTS(
-					SELECT 1 FROM items
-					WHERE name = ${name} AND id != ${excludeItemId}
-				) as exists
-			`;
-			return result.exists;
-		}
 		const [result] = await sql<[{ exists: boolean }]>`
-			SELECT EXISTS(SELECT 1 FROM items WHERE name = ${name}) as exists
+			SELECT EXISTS(
+				SELECT 1 FROM items
+				WHERE name = ${name}
+				${excludeItemId !== undefined ? sql`AND id != ${excludeItemId}` : sql``}
+			) as exists
 		`;
 		return result.exists;
 	}

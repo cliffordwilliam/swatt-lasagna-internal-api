@@ -1,6 +1,6 @@
 import { type Static, Type } from "@sinclair/typebox";
 
-export const PaymentMethodSchema = Type.Object({
+const PaymentMethodSchema = Type.Object({
 	id: Type.Integer(),
 	name: Type.String(),
 });

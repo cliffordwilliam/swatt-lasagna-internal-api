@@ -238,8 +238,8 @@ export class OrderService {
 	}
 
 	private async _validateOrderExists(sql: Sql, orderId: number): Promise<void> {
-		const existingOrder = await this.repo.getOrderById(sql, orderId);
-		if (!existingOrder) {
+		const exists = await this.repo.orderExists(sql, orderId);
+		if (!exists) {
 			throw new NotFoundError(`Order with id ${orderId} not found`);
 		}
 	}
@@ -248,11 +248,9 @@ export class OrderService {
 		sql: Sql,
 		deliveryMethodId: number,
 	): Promise<void> {
-		const deliveryMethod = await this.deliveryMethodRepo.getDeliveryMethodById(
-			sql,
-			deliveryMethodId,
-		);
-		if (!deliveryMethod) {
+		const deliveryMethodExists =
+			await this.deliveryMethodRepo.deliveryMethodExists(sql, deliveryMethodId);
+		if (!deliveryMethodExists) {
 			throw new NotFoundError(
 				`Delivery method with id ${deliveryMethodId} not found`,
 			);
@@ -263,11 +261,11 @@ export class OrderService {
 		sql: Sql,
 		paymentMethodId: number,
 	): Promise<void> {
-		const paymentMethod = await this.paymentMethodRepo.getPaymentMethodById(
+		const exists = await this.paymentMethodRepo.paymentMethodExists(
 			sql,
 			paymentMethodId,
 		);
-		if (!paymentMethod) {
+		if (!exists) {
 			throw new NotFoundError(
 				`Payment method with id ${paymentMethodId} not found`,
 			);
@@ -278,11 +276,11 @@ export class OrderService {
 		sql: Sql,
 		orderStatusId: number,
 	): Promise<void> {
-		const orderStatus = await this.orderStatusRepo.getOrderStatusById(
+		const exists = await this.orderStatusRepo.orderStatusExists(
 			sql,
 			orderStatusId,
 		);
-		if (!orderStatus) {
+		if (!exists) {
 			throw new NotFoundError(
 				`Order status with id ${orderStatusId} not found`,
 			);
@@ -318,7 +316,6 @@ export class OrderService {
 		const itemsToInsert: OrderItemValues[] = items.map((reqItem) => {
 			const item = itemMap.get(reqItem.item_id);
 			if (!item) {
-				// Could happen if concurrent deletion happens
 				throw new NotFoundError(`Item with id ${reqItem.item_id} not found`);
 			}
 			subtotalAmount += item.price * reqItem.quantity;

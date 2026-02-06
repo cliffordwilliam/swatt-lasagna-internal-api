@@ -1,6 +1,6 @@
 import { type Static, Type } from "@sinclair/typebox";
 
-export const OrderStatusSchema = Type.Object({
+const OrderStatusSchema = Type.Object({
 	id: Type.Integer(),
 	name: Type.String(),
 });

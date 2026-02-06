@@ -7,17 +7,7 @@ export const CreatePhoneSchema = Type.Object({
 
 export type CreatePhoneInput = Static<typeof CreatePhoneSchema>;
 
-export const PhoneSchema = Type.Object({
-	id: Type.Integer(),
-	person_id: Type.Integer(),
-	phone_number: Type.String({ minLength: 1, maxLength: 25 }),
-	created_at: Type.String({ format: "date-time" }),
-	updated_at: Type.String({ format: "date-time" }),
-});
-
-export type PhoneRow = Static<typeof PhoneSchema>;
-
-export const PhoneSummarySchema = Type.Object({
+const PhoneSummarySchema = Type.Object({
 	id: Type.Integer(),
 	person_id: Type.Integer(),
 	phone_number: Type.String({ minLength: 1, maxLength: 25 }),

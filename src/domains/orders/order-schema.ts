@@ -5,35 +5,27 @@ import type { PersonRow } from "../persons/person-schema.js";
 import type { PhoneSummaryRow as PhoneRow } from "../phones/phone-schema.js";
 import { SearchPhoneResultSchema } from "../phones/phone-schema.js";
 
-export const PhoneInputSchema = Type.Object({
+const PersonInputSchema = Type.Object({
 	id: Type.Integer(),
+	phone: Type.Object({ id: Type.Integer() }),
+	address: Type.Object({ id: Type.Integer() }),
 });
 
-export const AddressInputSchema = Type.Object({
-	id: Type.Integer(),
-});
-
-export const PersonInputSchema = Type.Object({
-	id: Type.Integer(),
-	phone: PhoneInputSchema,
-	address: AddressInputSchema,
-});
-
-export const PersonResponseSchema = Type.Object({
+const PersonResponseSchema = Type.Object({
 	id: Type.Integer(),
 	name: Type.String({ minLength: 1, maxLength: 255 }),
 	phone: SearchPhoneResultSchema,
 	address: SearchAddressResultSchema,
 });
 
-export const OrderItemInputSchema = Type.Object({
+const OrderItemInputSchema = Type.Object({
 	item_id: Type.Integer(),
 	quantity: Type.Integer({ minimum: 1, maximum: 10000 }),
 });
 
 export type OrderItemInput = Static<typeof OrderItemInputSchema>;
 
-export const OrderItemResponseSchema = Type.Object({
+const OrderItemResponseSchema = Type.Object({
 	item_id: Type.Integer(),
 	item_name: Type.String({ minLength: 1, maxLength: 100 }),
 	item_price: Type.Integer({ minimum: 0, maximum: 1000000000 }),
@@ -74,30 +66,6 @@ export const GetOrderResponseSchema = Type.Object({
 
 export type GetOrderResponse = Static<typeof GetOrderResponseSchema>;
 
-export interface OrderRow {
-	id: number;
-	order_number: string;
-	order_date: Date;
-	delivery_date: Date;
-	buyer_id: number;
-	buyer_name: string;
-	buyer_phone: string;
-	buyer_address: string;
-	recipient_id: number;
-	recipient_name: string;
-	recipient_phone: string;
-	recipient_address: string;
-	delivery_method_id: number;
-	payment_method_id: number;
-	order_status_id: number;
-	shipping_cost: number;
-	subtotal_amount: number;
-	total_amount: number;
-	note: string | null;
-	created_at: Date;
-	updated_at: Date;
-}
-
 export interface OrderItemInsert {
 	order_id: number;
 	item_id: number;
@@ -120,7 +88,7 @@ export type PreparedOrderData = {
 	itemsToInsert: OrderItemValues[];
 };
 
-export const OrderListSchema = Type.Object({
+const OrderListSchema = Type.Object({
 	id: Type.Integer(),
 	order_number: Type.String({ minLength: 1, maxLength: 50 }),
 	order_date: Type.String({ format: "date-time" }),

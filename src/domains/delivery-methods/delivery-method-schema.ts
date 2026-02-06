@@ -1,6 +1,6 @@
 import { type Static, Type } from "@sinclair/typebox";
 
-export const DeliveryMethodSchema = Type.Object({
+const DeliveryMethodSchema = Type.Object({
 	id: Type.Integer(),
 	name: Type.String(),
 });

@@ -54,20 +54,4 @@ export class AddressRepository {
 		`;
 		return result.exists;
 	}
-
-	async getAddressIdByValue(
-		sql: Sql,
-		personId: number,
-		addressValue: string | null,
-	): Promise<number | null> {
-		if (!addressValue) {
-			return null;
-		}
-		const [address] = await sql<[{ id: number } | undefined]>`
-			SELECT id FROM person_addresses
-			WHERE person_id = ${personId} AND address = ${addressValue}
-			LIMIT 1
-		`;
-		return address?.id ?? null;
-	}
 }

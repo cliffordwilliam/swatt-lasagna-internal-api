@@ -8,13 +8,10 @@ export class OrderStatusRepository {
 		`;
 	}
 
-	async getOrderStatusById(
-		sql: Sql,
-		id: number,
-	): Promise<{ id: number } | undefined> {
-		const [status] = await sql<{ id: number }[]>`
-			SELECT id FROM order_statuses WHERE id = ${id}
+	async orderStatusExists(sql: Sql, id: number): Promise<boolean> {
+		const [result] = await sql<[{ exists: boolean }]>`
+			SELECT EXISTS(SELECT 1 FROM order_statuses WHERE id = ${id}) as exists
 		`;
-		return status;
+		return result.exists;
 	}
 }
