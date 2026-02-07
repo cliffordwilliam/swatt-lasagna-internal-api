@@ -56,9 +56,6 @@ export class DashboardService {
 	private _formatSummary(row: SummaryRow): DashboardResponse["summary"] {
 		return {
 			total_orders: toInt(row.total_orders),
-			paid_orders: toInt(row.paid_orders),
-			unpaid_orders: toInt(row.unpaid_orders),
-			downpayment_orders: toInt(row.downpayment_orders),
 			total_revenue: toInt(row.total_revenue),
 			pending_revenue: toInt(row.pending_revenue),
 			avg_order_value: toInt(row.avg_order_value),
@@ -72,12 +69,9 @@ export class DashboardService {
 			id: row.id,
 			order_number: row.order_number,
 			order_date: toDateStr(row.order_date),
-			delivery_date: toDateStr(row.delivery_date),
 			recipient_name: row.recipient_name,
 			total_amount: row.total_amount,
 			status: row.status,
-			payment_method: row.payment_method,
-			delivery_method: row.delivery_method,
 		};
 	}
 
@@ -87,11 +81,9 @@ export class DashboardService {
 		return {
 			id: row.id,
 			order_number: row.order_number,
-			delivery_date: toDateStr(row.delivery_date),
 			recipient_name: row.recipient_name,
 			recipient_phone: row.recipient_phone,
 			recipient_address: row.recipient_address,
-			total_amount: row.total_amount,
 			status: row.status,
 			delivery_method: row.delivery_method,
 		};
@@ -113,8 +105,6 @@ export class DashboardService {
 			item_name: row.item_name,
 			total_quantity: toInt(row.total_quantity),
 			total_sales: toInt(row.total_sales),
-			order_count: toInt(row.order_count),
-			avg_price: toInt(row.avg_price),
 		};
 	}
 
@@ -135,7 +125,6 @@ export class DashboardService {
 		return {
 			delivery_day: toDateOnlyStr(row.delivery_day),
 			order_count: toInt(row.order_count),
-			total_value: toInt(row.total_value),
 		};
 	}
 }

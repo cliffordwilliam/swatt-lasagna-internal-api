@@ -14,9 +14,6 @@ export class DashboardRepository {
 		const [row] = await sql<SummaryRow[]>`
 			SELECT
 				COUNT(*) as total_orders,
-				SUM(CASE WHEN os.name = 'lunas' THEN 1 ELSE 0 END) as paid_orders,
-				SUM(CASE WHEN os.name = 'belum bayar' THEN 1 ELSE 0 END) as unpaid_orders,
-				SUM(CASE WHEN os.name = 'downpayment' THEN 1 ELSE 0 END) as downpayment_orders,
 				SUM(CASE WHEN os.name = 'lunas' THEN o.total_amount ELSE 0 END) as total_revenue,
 				SUM(CASE WHEN os.name != 'lunas' THEN o.total_amount ELSE 0 END) as pending_revenue,
 				CASE WHEN COUNT(*) > 0 THEN SUM(o.total_amount) / COUNT(*) ELSE 0 END as avg_order_value
@@ -33,16 +30,11 @@ export class DashboardRepository {
 				o.id,
 				o.order_number,
 				o.order_date,
-				o.delivery_date,
 				o.recipient_name,
 				o.total_amount,
-				os.name as status,
-				pm.name as payment_method,
-				dm.name as delivery_method
+				os.name as status
 			FROM orders o
 			JOIN order_statuses os ON o.order_status_id = os.id
-			JOIN payment_methods pm ON o.payment_method_id = pm.id
-			JOIN delivery_methods dm ON o.delivery_method_id = dm.id
 			ORDER BY o.order_date DESC
 			LIMIT 10
 		`;
@@ -53,11 +45,9 @@ export class DashboardRepository {
 			SELECT
 				o.id,
 				o.order_number,
-				o.delivery_date,
 				o.recipient_name,
 				o.recipient_phone,
 				o.recipient_address,
-				o.total_amount,
 				os.name as status,
 				dm.name as delivery_method
 			FROM orders o
@@ -88,9 +78,7 @@ export class DashboardRepository {
 			SELECT
 				oi.item_name,
 				SUM(oi.quantity) as total_quantity,
-				SUM(oi.line_total) as total_sales,
-				COUNT(DISTINCT oi.order_id) as order_count,
-				ROUND(AVG(oi.item_price)) as avg_price
+				SUM(oi.line_total) as total_sales
 			FROM order_items oi
 			JOIN orders o ON oi.order_id = o.id
 			WHERE o.order_date >= CURRENT_DATE - INTERVAL '30 days'
@@ -125,8 +113,7 @@ export class DashboardRepository {
 		return await sql<UpcomingDeliveryRow[]>`
 			SELECT
 				DATE(o.delivery_date) as delivery_day,
-				COUNT(*) as order_count,
-				SUM(o.total_amount) as total_value
+				COUNT(*) as order_count
 			FROM orders o
 			WHERE o.delivery_date BETWEEN CURRENT_DATE + INTERVAL '1 day'
 				AND CURRENT_DATE + INTERVAL '3 days'
