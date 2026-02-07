@@ -12,4 +12,4 @@ RUN npm ci --only=production --ignore-scripts
 COPY --from=builder /app/dist ./dist
 COPY migrate.js seed.js ./
 COPY --from=builder /app/migrations ./migrations
-CMD ["node", "dist/index.js"]
+CMD ["sh", "-c", "node migrate.js && node dist/index.js"]
