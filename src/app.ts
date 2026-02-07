@@ -6,6 +6,7 @@ import { requireAuth } from "./config/auth.js";
 import db from "./config/db.js";
 import errorHandler from "./config/error-handler.js";
 import addressRoutes from "./domains/addresses/address-routes.js";
+import dashboardRoutes from "./domains/dashboard/dashboard-routes.js";
 import deliveryMethodRoutes from "./domains/delivery-methods/delivery-method-routes.js";
 import itemRoutes from "./domains/items/item-routes.js";
 import orderStatusRoutes from "./domains/order-statuses/order-status-routes.js";
@@ -59,6 +60,7 @@ const app: FastifyPluginAsync<AppOptions> = async (fastify, opts) => {
 			instance.addHook("preHandler", requireAuth);
 
 			instance.register(orderRoutes, { prefix: "/orders" });
+			instance.register(dashboardRoutes, { prefix: "/dashboard" });
 			instance.register(itemRoutes, { prefix: "/items" });
 			instance.register(orderStatusRoutes, { prefix: "/order-statuses" });
 			instance.register(paymentMethodRoutes, { prefix: "/payment-methods" });
