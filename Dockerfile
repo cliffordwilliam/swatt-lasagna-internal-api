@@ -7,9 +7,10 @@ RUN npm run build
 
 FROM node:20-alpine AS production
 WORKDIR /app
-COPY package*.json ./
+COPY --chown=node:node package*.json ./
 RUN npm ci --only=production --ignore-scripts
-COPY --from=builder /app/dist ./dist
-COPY migrate.js seed.js ./
-COPY --from=builder /app/migrations ./migrations
+COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --chown=node:node migrate.js seed.js ./
+COPY --from=builder --chown=node:node /app/migrations ./migrations
+USER node
 CMD ["sh", "-c", "node migrate.js && node dist/index.js"]
