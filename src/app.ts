@@ -1,9 +1,9 @@
-import { clerkPlugin, getAuth } from "@clerk/fastify";
+import { clerkPlugin } from "@clerk/fastify";
 import cors from "@fastify/cors";
 import fastifyHelmet from "@fastify/helmet";
 import fastifyRateLimit from "@fastify/rate-limit";
 import type { FastifyPluginAsync } from "fastify";
-import { requireAuth } from "./config/auth.js";
+import { captureUserId, requireAuth } from "./config/auth.js";
 import db from "./config/db.js";
 import errorHandler from "./config/error-handler.js";
 import addressRoutes from "./domains/addresses/address-routes.js";
@@ -40,14 +40,14 @@ const app: FastifyPluginAsync<AppOptions> = async (fastify, opts) => {
 	});
 
 	fastify.register(clerkPlugin, { hookName: "onRequest" });
+	fastify.addHook("onRequest", captureUserId);
 
 	fastify.register(fastifyRateLimit, {
 		max: parseInt(process.env.RATE_LIMIT_MAX!),
 		timeWindow: parseInt(process.env.RATE_LIMIT_TIME_WINDOW!),
 		keyGenerator: (request) => {
-			const { userId } = getAuth(request);
-			if (userId) {
-				return `user:${userId}`;
+			if (request.userId) {
+				return `user:${request.userId}`;
 			}
 			return request.ip;
 		},

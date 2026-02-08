@@ -20,6 +20,10 @@ const personRoutes: FastifyPluginAsync = async (fastify) => {
 		},
 		async (request, reply) => {
 			await personService.createPerson(request.body);
+			request.log.info(
+				{ userId: request.userId, name: request.body.name },
+				"Person created",
+			);
 			return reply.status(201).send();
 		},
 	);

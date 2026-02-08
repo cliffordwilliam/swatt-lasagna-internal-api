@@ -23,6 +23,10 @@ const orderRoutes: FastifyPluginAsync = async (fastify) => {
 		},
 		async (request, reply) => {
 			await orderService.createOrder(request.body);
+			request.log.info(
+				{ userId: request.userId, order_number: request.body.order_number },
+				"Order created",
+			);
 			return reply.status(201).send();
 		},
 	);
@@ -66,6 +70,14 @@ const orderRoutes: FastifyPluginAsync = async (fastify) => {
 		},
 		async (request, reply) => {
 			await orderService.putOrder(request.body, request.params.id);
+			request.log.info(
+				{
+					userId: request.userId,
+					order_id: request.params.id,
+					order_number: request.body.order_number,
+				},
+				"Order updated",
+			);
 			return reply.status(200).send();
 		},
 	);

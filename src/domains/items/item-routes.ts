@@ -21,6 +21,10 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
 		},
 		async (request, reply) => {
 			await itemService.createItem(request.body);
+			request.log.info(
+				{ userId: request.userId, name: request.body.name },
+				"Item created",
+			);
 			return reply.status(201).send();
 		},
 	);
@@ -63,6 +67,14 @@ const itemRoutes: FastifyPluginAsync = async (fastify) => {
 		},
 		async (request, reply) => {
 			await itemService.putItem(request.body, request.params.id);
+			request.log.info(
+				{
+					userId: request.userId,
+					item_id: request.params.id,
+					name: request.body.name,
+				},
+				"Item updated",
+			);
 			return reply.status(200).send();
 		},
 	);

@@ -20,6 +20,10 @@ const phoneRoutes: FastifyPluginAsync = async (fastify) => {
 		},
 		async (request, reply) => {
 			await phoneService.createPhone(request.body);
+			request.log.info(
+				{ userId: request.userId, person_id: request.body.person_id },
+				"Phone created",
+			);
 			return reply.status(201).send();
 		},
 	);

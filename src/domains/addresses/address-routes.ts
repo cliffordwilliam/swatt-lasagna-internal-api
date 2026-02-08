@@ -20,6 +20,10 @@ const addressRoutes: FastifyPluginAsync = async (fastify) => {
 		},
 		async (request, reply) => {
 			await addressService.createAddress(request.body);
+			request.log.info(
+				{ userId: request.userId, person_id: request.body.person_id },
+				"Address created",
+			);
 			return reply.status(201).send();
 		},
 	);

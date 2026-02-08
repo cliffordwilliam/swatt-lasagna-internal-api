@@ -16,6 +16,7 @@ export default function errorHandler(fastify: FastifyInstance) {
 				requestId: request.id,
 				method: request.method,
 				url: request.url,
+				...(request.userId && { userId: request.userId }),
 			});
 
 			if (error instanceof AppError) {
