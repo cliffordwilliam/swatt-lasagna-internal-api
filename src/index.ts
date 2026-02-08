@@ -3,6 +3,9 @@ import validateEnv from "./env.js";
 
 validateEnv();
 
+import "./instrument.js";
+
+import * as Sentry from "@sentry/node";
 import closeWithGrace from "close-with-grace";
 import fastify from "fastify";
 import app from "./app.js";
@@ -27,6 +30,8 @@ const server = fastify({
 	keepAliveTimeout: 5000,
 	requestTimeout: 30000,
 });
+
+Sentry.setupFastifyErrorHandler(server);
 
 process.on("uncaughtException", (err) => {
 	server.log.fatal({ err }, "uncaught exception");

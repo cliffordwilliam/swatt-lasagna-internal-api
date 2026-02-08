@@ -76,6 +76,7 @@ services:
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX}
       RATE_LIMIT_TIME_WINDOW: ${RATE_LIMIT_TIME_WINDOW}
       NODE_ENV: ${NODE_ENV}
+      SENTRY_DSN: ${SENTRY_DSN}
     depends_on:
       db-seed:
         condition: service_completed_successfully
