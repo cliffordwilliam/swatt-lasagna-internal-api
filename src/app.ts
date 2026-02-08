@@ -1,5 +1,6 @@
 import { clerkPlugin } from "@clerk/fastify";
 import cors from "@fastify/cors";
+import fastifyHelmet from "@fastify/helmet";
 import fastifyRateLimit from "@fastify/rate-limit";
 import type { FastifyPluginAsync } from "fastify";
 import { requireAuth } from "./config/auth.js";
@@ -23,12 +24,23 @@ const app: FastifyPluginAsync<AppOptions> = async (fastify, opts) => {
 	if (!opts.skipDb) {
 		await db(fastify);
 	}
+
 	errorHandler(fastify);
+
+	fastify.register(fastifyHelmet, {
+		contentSecurityPolicy: false,
+		hsts: { maxAge: 15552000, includeSubDomains: true },
+		noSniff: true,
+		referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+	});
+
 	fastify.register(cors, {
 		origin: process.env.CORS_ORIGIN!,
 		methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
 	});
+
 	fastify.register(clerkPlugin);
+
 	fastify.register(fastifyRateLimit, {
 		max: parseInt(process.env.RATE_LIMIT_MAX!),
 		timeWindow: parseInt(process.env.RATE_LIMIT_TIME_WINDOW!),
