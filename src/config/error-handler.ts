@@ -13,6 +13,7 @@ export default function errorHandler(fastify: FastifyInstance) {
 		async (error: FastifyError | PostgresError | AppError, request, reply) => {
 			request.log.error({
 				err: error,
+				requestId: request.id,
 				method: request.method,
 				url: request.url,
 			});

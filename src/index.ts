@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import validateEnv from "./env.js";
 
 validateEnv();
@@ -7,6 +8,12 @@ import fastify from "fastify";
 import app from "./app.js";
 
 const server = fastify({
+	genReqId: (req) => {
+		const id = req.headers["x-request-id"];
+		return (Array.isArray(id) ? id[0] : id) ?? randomUUID();
+	},
+	requestIdHeader: "x-request-id",
+	requestIdLogLabel: "requestId",
 	logger: {
 		level: process.env.NODE_ENV === "production" ? "info" : "debug",
 		serializers: {
