@@ -30,7 +30,6 @@ export interface RevenueTrendRow {
 	date: Date;
 	order_count: number | string;
 	revenue: number | string | null;
-	paid_revenue: number | string | null;
 }
 
 export interface TopItemRow {
@@ -81,7 +80,6 @@ const DashboardRevenueTrendItemSchema = Type.Object({
 	date: Type.String({ format: "date" }),
 	order_count: Type.Integer(),
 	revenue: Type.Integer(),
-	paid_revenue: Type.Integer(),
 });
 
 const DashboardTopItemSchema = Type.Object({

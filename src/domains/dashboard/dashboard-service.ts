@@ -96,7 +96,6 @@ export class DashboardService {
 			date: toDateOnlyStr(row.date),
 			order_count: toInt(row.order_count),
 			revenue: toInt(row.revenue),
-			paid_revenue: toInt(row.paid_revenue),
 		};
 	}
 

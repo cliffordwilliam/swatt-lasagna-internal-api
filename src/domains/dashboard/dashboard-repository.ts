@@ -63,11 +63,11 @@ export class DashboardRepository {
 			SELECT
 				DATE(o.order_date) as date,
 				COUNT(*) as order_count,
-				SUM(o.total_amount) as revenue,
-				SUM(CASE WHEN os.name = 'lunas' THEN o.total_amount ELSE 0 END) as paid_revenue
+				SUM(o.total_amount) as revenue
 			FROM orders o
 			JOIN order_statuses os ON o.order_status_id = os.id
 			WHERE o.order_date >= CURRENT_DATE - INTERVAL '7 days'
+				AND os.name = 'lunas'
 			GROUP BY DATE(o.order_date)
 			ORDER BY date ASC
 		`;
