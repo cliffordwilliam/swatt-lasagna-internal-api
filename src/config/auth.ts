@@ -11,4 +11,5 @@ export async function requireAuth(
 	if (!userId) {
 		throw new UnauthorizedError("Authentication required");
 	}
+	request.log = request.log.child({ userId });
 }
