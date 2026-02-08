@@ -69,7 +69,10 @@ async function seed() {
       ('tas kain k4', 15000),
       ('tas kain b3', 15000),
       ('tas kain b4', 15000),
-      ('hampers marmer cake', 350000);
+      ('hampers marmer cake', 350000)
+    ON CONFLICT (name) DO UPDATE SET
+      price = EXCLUDED.price,
+      updated_at = CURRENT_TIMESTAMP
   `;
 
 	console.log("Seed completed");

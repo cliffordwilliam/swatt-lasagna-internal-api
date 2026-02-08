@@ -49,6 +49,7 @@ Table storing all orders.
 - UNIQUE constraint on `order_number` (implicit index for order_number lookup)
 - `orders_order_number_search_idx`: GIN index on `order_number` using `gin_trgm_ops` for efficient ILIKE search queries (list orders filter)
 - `orders_order_date_status_idx`: Composite B-tree index on `(order_date DESC, order_status_id)` for list-orders (order by order_date, filter by date range and status); column order and direction match the common query pattern
+- `orders_delivery_date_idx`: B-tree index on `delivery_date` for filtering and range queries by delivery date (e.g. delivery scheduling, daily delivery lists)
 
 ## Foreign Keys
 
