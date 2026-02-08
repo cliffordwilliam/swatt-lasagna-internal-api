@@ -16,6 +16,9 @@ const server = fastify({
 			}),
 		},
 	},
+	connectionTimeout: 30000,
+	keepAliveTimeout: 5000,
+	requestTimeout: 30000,
 });
 
 process.on("uncaughtException", (err) => {
