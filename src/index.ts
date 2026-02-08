@@ -41,7 +41,7 @@ process.on("unhandledRejection", (reason, promise) => {
 try {
 	await server.register(app);
 
-	closeWithGrace(async ({ err, signal }) => {
+	closeWithGrace({ delay: 10000 }, async ({ err, signal }) => {
 		if (err) {
 			server.log.error(err);
 		}
