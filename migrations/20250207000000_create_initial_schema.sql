@@ -114,6 +114,7 @@ CREATE TABLE orders (
 
 CREATE INDEX orders_order_number_search_idx ON orders USING gin (order_number gin_trgm_ops);
 CREATE INDEX orders_order_date_status_idx ON orders (order_date DESC, order_status_id);
+CREATE INDEX orders_delivery_date_idx ON orders (delivery_date);
 
 CREATE TABLE order_items (
   order_id BIGINT NOT NULL REFERENCES orders(id),
