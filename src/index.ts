@@ -18,6 +18,16 @@ const server = fastify({
 	},
 });
 
+process.on("uncaughtException", (err) => {
+	server.log.fatal({ err }, "uncaught exception");
+	process.exit(1);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+	server.log.fatal({ err: reason, promise }, "unhandled promise rejection");
+	process.exit(1);
+});
+
 try {
 	await server.register(app);
 
