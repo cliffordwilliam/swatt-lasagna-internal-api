@@ -1,0 +1,28 @@
+name: Daily Postgres Backup
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC daily
+  workflow_dispatch:  # allows manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      
+      - name: Configure AWS CLI for B2
+        run: |
+          pip install awscli
+          aws configure set aws_access_key_id ${{ secrets.B2_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.B2_APPLICATION_KEY }}
+      
+      - name: Create backup
+        run: |
+          pg_dump "${{ secrets.DATABASE_URL }}" | gzip > backup-$(date +%Y%m%d-%H%M%S).sql.gz
+      
+      - name: Upload to B2
+        run: |
+          aws s3 cp backup-*.sql.gz s3://${{ secrets.B2_BUCKET_NAME }}/ \
+            --endpoint-url https://${{ secrets.B2_ENDPOINT }}
